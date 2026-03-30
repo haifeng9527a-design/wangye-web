@@ -781,7 +781,9 @@ class _StockChartPageState extends State<StockChartPage>
           builder: (context, constraints) {
             final screenH = MediaQuery.sizeOf(context).height;
             final isDesktop = constraints.maxWidth >= 1180;
-            final fixedChartHeight = (screenH * 0.56).clamp(420.0, 640.0);
+            final fixedChartHeight = isDesktop
+                ? (screenH - 150).clamp(520.0, 760.0)
+                : (screenH * 0.56).clamp(420.0, 640.0);
             final detailPanelHeight = fixedChartHeight;
             final availableHeight = fixedChartHeight - _chartContainerPaddingV - _intradayChartPaddingV - 8;
             final contentHeight = availableHeight.clamp(160.0, double.infinity);
@@ -859,7 +861,7 @@ class _StockChartPageState extends State<StockChartPage>
                               ),
                               const SizedBox(width: 14),
                               SizedBox(
-                                width: 420,
+                                width: constraints.maxWidth >= 1500 ? 360 : 340,
                                 height: detailPanelHeight,
                                 child: _buildRightQuotePanel(
                                   displayPrice: displayPrice,
@@ -1043,7 +1045,7 @@ class _StockChartPageState extends State<StockChartPage>
   }) {
     final tone =
         changeVal == null || changeVal >= 0 ? ChartTheme.up : ChartTheme.down;
-    final bodyHeight = (chartHeight - 182).clamp(280.0, 520.0);
+    final bodyHeight = (chartHeight - 144).clamp(360.0, 640.0);
     final desktopMetrics = [
       ('Open', _formatRightMetric(_bestOpen())),
       ('High', _formatRightMetric(_bestHigh())),
@@ -1065,7 +1067,7 @@ class _StockChartPageState extends State<StockChartPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1097,7 +1099,7 @@ class _StockChartPageState extends State<StockChartPage>
                             ],
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           widget.name ?? _stockName ?? _effectiveSymbol,
                           maxLines: 1,
@@ -1108,7 +1110,7 @@ class _StockChartPageState extends State<StockChartPage>
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 12),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
@@ -1118,7 +1120,7 @@ class _StockChartPageState extends State<StockChartPage>
                                   : '—',
                               style: TextStyle(
                                 color: tone,
-                                fontSize: 54,
+                                fontSize: 46,
                                 height: 0.95,
                                 fontWeight: FontWeight.w800,
                                 fontFamily: ChartTheme.fontMono,
@@ -1160,7 +1162,7 @@ class _StockChartPageState extends State<StockChartPage>
                       ],
                     ),
                   ),
-                  const SizedBox(width: 24),
+                  const SizedBox(width: 18),
                   Expanded(
                     flex: 4,
                     child: Column(
@@ -1168,7 +1170,7 @@ class _StockChartPageState extends State<StockChartPage>
                         for (var i = 0; i < desktopMetrics.length; i += 2)
                           Padding(
                             padding: EdgeInsets.only(
-                              bottom: i == desktopMetrics.length - 2 ? 0 : 10,
+                              bottom: i == desktopMetrics.length - 2 ? 0 : 8,
                             ),
                             child: Row(
                               children: [
@@ -1200,7 +1202,7 @@ class _StockChartPageState extends State<StockChartPage>
               color: ChartTheme.borderSubtle,
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
               child: _buildDesktopToolbar(),
             ),
             Expanded(
@@ -1460,7 +1462,7 @@ class _StockChartPageState extends State<StockChartPage>
       borderRadius: BorderRadius.circular(10),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: selected ? ChartTheme.surface2 : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
@@ -1472,7 +1474,7 @@ class _StockChartPageState extends State<StockChartPage>
           label,
           style: TextStyle(
             color: selected ? ChartTheme.textPrimary : ChartTheme.textSecondary,
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
           ),
         ),
@@ -1482,7 +1484,7 @@ class _StockChartPageState extends State<StockChartPage>
 
   Widget _desktopToolChip(String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: ChartTheme.surface2,
         borderRadius: BorderRadius.circular(10),
@@ -1492,7 +1494,7 @@ class _StockChartPageState extends State<StockChartPage>
         label,
         style: const TextStyle(
           color: ChartTheme.textSecondary,
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.w600,
         ),
       ),
