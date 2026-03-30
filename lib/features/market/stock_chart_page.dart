@@ -712,14 +712,15 @@ class _StockChartPageState extends State<StockChartPage>
     final changeVal = _currentPrice != null && _prevClose != null && _prevClose! > 0
         ? _currentPrice! - _prevClose!
         : null;
+    final statusLabel = _statusLabel(context);
     return Scaffold(
       backgroundColor: ChartTheme.background,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final screenH = MediaQuery.sizeOf(context).height;
-            final fixedChartHeight = (screenH * 0.42).clamp(300.0, 390.0);
-            final detailPanelHeight = (screenH * 0.30).clamp(220.0, 300.0);
+            final fixedChartHeight = (screenH * 0.42).clamp(320.0, 430.0);
+            final detailPanelHeight = (screenH * 0.36).clamp(260.0, 380.0);
             final availableHeight = fixedChartHeight - _chartContainerPaddingV - _intradayChartPaddingV - 8;
             final contentHeight = availableHeight.clamp(160.0, double.infinity);
             final contentHeightIntraday = contentHeight.clamp(180.0, double.infinity);
@@ -754,82 +755,138 @@ class _StockChartPageState extends State<StockChartPage>
 
             return SingleChildScrollView(
               padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 12),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Column(
-                  children: [
-                    DetailHeader(
-                      symbol: _effectiveSymbol,
-                      name: widget.name ?? _stockName,
-                      onBack: () => Navigator.of(context).maybePop(),
-                      onPrev: _prevNextIndex > 0 ? _switchToPrev : null,
-                      onNext: _prevNextIndex >= 0 && _prevNextIndex < _symbolListLength - 1 ? _switchToNext : null,
-                    ),
-                    PriceSection(
-                      currentPrice: _currentPrice,
-                      change: changeVal,
-                      changePercent: _changePercent,
-                      prevClose: _prevClose,
-                      open: _dayOpen ?? (_candlesIntraday.isNotEmpty ? _candlesIntraday.first.open : null),
-                      high: _dayHigh ?? (_candlesIntraday.isNotEmpty ? _candlesIntraday.map((c) => c.high).reduce((a, b) => a > b ? a : b) : null),
-                      low: _dayLow ?? (_candlesIntraday.isNotEmpty ? _candlesIntraday.map((c) => c.low).reduce((a, b) => a < b ? a : b) : null),
-                      turnover: _turnoverForPriceSection(),
-                      marketCap: _marketCapForPriceSection(),
-                      turnoverRate: _keyRatios != null && _keyRatios!['volume_turnover'] != null
-                          ? (_keyRatios!['volume_turnover'] as num).toDouble() * 100
-                          : null,
-                      amplitude: _prevClose != null && _prevClose! > 0 && _dayHigh != null && _dayLow != null
-                          ? (_dayHigh! - _dayLow!) / _prevClose! * 100
-                          : null,
-                    ),
-                    ChartModeTabs(
-                      tabIndex: _tabController.index,
-                      onTabChanged: (i) => _tabController.animateTo(i),
-                      isIntraday: _tabController.index == 0,
-                      intradayPeriod: _intradayInterval,
-                      klineTimespan: _klineInterval == '1day' ? 'day' : _klineInterval == '1week' ? 'week' : _klineInterval == '1month' ? 'month' : _klineInterval == '1year' ? 'year' : _klineInterval,
-                      onIntradayPeriodChanged: (_) {},
-                      onKlineTimespanChanged: (_) {},
-                      extendedKlineInterval: _extendedKlineInterval,
-                      onExtendedKlineChanged: (v) {
-                        if (_extendedKlineInterval != v) {
-                          setState(() {
-                            _extendedKlineInterval = v;
-                            _klineInterval = v;
-                            _chartLoading = true;
-                          });
-                          _loadKLine().then((_) {
-                            if (mounted) setState(() => _chartLoading = false);
-                          });
-                        }
-                      },
-                    ),
-                    if (widget.isMockData) _buildMockBanner(),
-                    TvChartContainer(
-                      edgeToEdge: true,
-                      padding: const EdgeInsets.fromLTRB(0, 4, 0, 10),
-                      child: SizedBox(
-                        height: fixedChartHeight,
-                        child: ClipRect(
-                          child: chartContent,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF111B26),
+                      ChartTheme.background,
+                      ChartTheme.background,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    children: [
+                      DetailHeader(
+                        symbol: _effectiveSymbol,
+                        name: widget.name ?? _stockName,
+                        onBack: () => Navigator.of(context).maybePop(),
+                        onPrev: _prevNextIndex > 0 ? _switchToPrev : null,
+                        onNext: _prevNextIndex >= 0 && _prevNextIndex < _symbolListLength - 1 ? _switchToNext : null,
+                      ),
+                      PriceSection(
+                        currentPrice: _currentPrice,
+                        change: changeVal,
+                        changePercent: _changePercent,
+                        prevClose: _prevClose,
+                        open: _dayOpen ?? (_candlesIntraday.isNotEmpty ? _candlesIntraday.first.open : null),
+                        high: _dayHigh ?? (_candlesIntraday.isNotEmpty ? _candlesIntraday.map((c) => c.high).reduce((a, b) => a > b ? a : b) : null),
+                        low: _dayLow ?? (_candlesIntraday.isNotEmpty ? _candlesIntraday.map((c) => c.low).reduce((a, b) => a < b ? a : b) : null),
+                        turnover: _turnoverForPriceSection(),
+                        marketCap: _marketCapForPriceSection(),
+                        turnoverRate: _keyRatios != null && _keyRatios!['volume_turnover'] != null
+                            ? (_keyRatios!['volume_turnover'] as num).toDouble() * 100
+                            : null,
+                        amplitude: _prevClose != null && _prevClose! > 0 && _dayHigh != null && _dayLow != null
+                            ? (_dayHigh! - _dayLow!) / _prevClose! * 100
+                            : null,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: Row(
+                          children: [
+                            _infoChip(
+                              statusLabel ?? 'US Market',
+                              tone: statusLabel == null || statusLabel.contains('盘') || statusLabel.toLowerCase().contains('intra')
+                                  ? ChartTheme.up
+                                  : ChartTheme.textSecondary,
+                            ),
+                            const SizedBox(width: 8),
+                            _infoChip(
+                              'Symbol ${_effectiveSymbol}',
+                              tone: ChartTheme.accentGold,
+                            ),
+                            if (widget.isMockData) ...[
+                              const SizedBox(width: 8),
+                              _infoChip('Mock Data', tone: ChartTheme.down),
+                            ],
+                          ],
                         ),
                       ),
-                    ),
-                    SizedBox(
-                      height: detailPanelHeight,
-                      child: BottomDetailTabs(
-                        symbol: _effectiveSymbol,
-                        currentPrice: _currentPrice,
-                        overlayIndicator: _overlayIndicator,
-                        subChartIndicator: _subChartIndicator,
-                        showPrevCloseLine: _showPrevCloseLine,
-                        onOverlayChanged: (v) => setState(() => _overlayIndicator = v),
-                        onSubChartChanged: (v) => setState(() => _subChartIndicator = v),
-                        onShowPrevCloseLineChanged: (v) => setState(() => _showPrevCloseLine = v),
-                        klineCandles: _candlesKLine,
+                      ChartModeTabs(
+                        tabIndex: _tabController.index,
+                        onTabChanged: (i) => _tabController.animateTo(i),
+                        isIntraday: _tabController.index == 0,
+                        intradayPeriod: _intradayInterval,
+                        klineTimespan: _klineInterval == '1day' ? 'day' : _klineInterval == '1week' ? 'week' : _klineInterval == '1month' ? 'month' : _klineInterval == '1year' ? 'year' : _klineInterval,
+                        onIntradayPeriodChanged: (_) {},
+                        onKlineTimespanChanged: (_) {},
+                        extendedKlineInterval: _extendedKlineInterval,
+                        onExtendedKlineChanged: (v) {
+                          if (_extendedKlineInterval != v) {
+                            setState(() {
+                              _extendedKlineInterval = v;
+                              _klineInterval = v;
+                              _chartLoading = true;
+                            });
+                            _loadKLine().then((_) {
+                              if (mounted) setState(() => _chartLoading = false);
+                            });
+                          }
+                        },
                       ),
-                    ),
-                  ],
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: ChartTheme.cardBackground,
+                            borderRadius: BorderRadius.circular(ChartTheme.radiusCard),
+                            border: Border.all(color: ChartTheme.border),
+                            boxShadow: ChartTheme.cardShadow,
+                          ),
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+                                child: _buildStatsBar(),
+                              ),
+                              TvChartContainer(
+                                edgeToEdge: true,
+                                padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+                                child: SizedBox(
+                                  height: fixedChartHeight,
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                      bottom: Radius.circular(18),
+                                    ),
+                                    child: chartContent,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        height: detailPanelHeight,
+                        child: BottomDetailTabs(
+                          symbol: _effectiveSymbol,
+                          currentPrice: _currentPrice,
+                          overlayIndicator: _overlayIndicator,
+                          subChartIndicator: _subChartIndicator,
+                          showPrevCloseLine: _showPrevCloseLine,
+                          onOverlayChanged: (v) => setState(() => _overlayIndicator = v),
+                          onSubChartChanged: (v) => setState(() => _subChartIndicator = v),
+                          onShowPrevCloseLineChanged: (v) => setState(() => _showPrevCloseLine = v),
+                          klineCandles: _candlesKLine,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -876,6 +933,25 @@ class _StockChartPageState extends State<StockChartPage>
       d = d.add(const Duration(days: 1));
     }
     return DateTime.utc(year, month, 1);
+  }
+
+  Widget _infoChip(String label, {required Color tone}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: tone.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: tone.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: tone,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 
   Widget _buildStatsBar() {

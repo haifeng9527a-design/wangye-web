@@ -4,8 +4,6 @@ import '../../../l10n/app_localizations.dart';
 import '../watchlist_repository.dart';
 import 'chart_theme.dart';
 
-/// 详情页顶栏（参考主流行情 App）：左 返回 | 中 股票代码+左右箭头切换 | 右 加入自选
-/// 支持在股票代码区域左右滑动切换上一只/下一只
 class DetailHeader extends StatefulWidget {
   const DetailHeader({
     super.key,
@@ -20,16 +18,12 @@ class DetailHeader extends StatefulWidget {
   });
 
   final String symbol;
-  /// 股票名称（如「特斯拉」），优先于 exchangeOrName
   final String? name;
   final String? exchangeOrName;
   final VoidCallback? onBack;
   final VoidCallback? onShare;
-  /// 更多菜单（汉堡菜单），预留扩展入口
   final VoidCallback? onMore;
-  /// 切换上一只股票，有值时显示左箭头
   final VoidCallback? onPrev;
-  /// 切换下一只股票，有值时显示右箭头
   final VoidCallback? onNext;
 
   @override
@@ -62,24 +56,27 @@ class _DetailHeaderState extends State<DetailHeader> {
   }
 
   Future<void> _toggleWatchlist() async {
-    final s = widget.symbol.trim();
-    if (s.isEmpty) return;
+    final symbol = widget.symbol.trim();
+    if (symbol.isEmpty) return;
     if (_inWatchlist) {
-      await WatchlistRepository.instance.removeWatchlist(s);
+      await WatchlistRepository.instance.removeWatchlist(symbol);
     } else {
-      await WatchlistRepository.instance.addWatchlist(s);
+      await WatchlistRepository.instance.addWatchlist(symbol);
     }
-    if (mounted) {
-      setState(() => _inWatchlist = !_inWatchlist);
-      final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_inWatchlist ? l10n.searchAddedToWatchlist(s) : l10n.watchlistRemove),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
+    if (!mounted) return;
+    setState(() => _inWatchlist = !_inWatchlist);
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _inWatchlist
+              ? l10n.searchAddedToWatchlist(symbol)
+              : l10n.watchlistRemove,
         ),
-      );
-    }
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
@@ -87,109 +84,124 @@ class _DetailHeaderState extends State<DetailHeader> {
     final subtitle = (widget.name ?? widget.exchangeOrName)?.trim();
     return SafeArea(
       bottom: false,
-      child: SizedBox(
-        height: 68,
-        child: Material(
-          color: ChartTheme.background,
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: ChartTheme.border, width: 0.5)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  _iconButton(
-                    icon: Icons.arrow_back_ios_new,
-                    size: 18,
-                    onPressed: widget.onBack ?? () => Navigator.of(context).maybePop(),
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onHorizontalDragEnd: (d) {
-                        if (widget.onPrev == null && widget.onNext == null) return;
-                        final v = d.velocity.pixelsPerSecond.dx;
-                        if (v < -_swipeThreshold && widget.onNext != null) {
-                          widget.onNext!();
-                        } else if (v > _swipeThreshold && widget.onPrev != null) {
-                          widget.onPrev!();
-                        }
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+        child: Container(
+          height: ChartTheme.topBarHeight,
+          decoration: BoxDecoration(
+            color: ChartTheme.cardBackground,
+            borderRadius: BorderRadius.circular(ChartTheme.radiusCard),
+            border: Border.all(color: ChartTheme.border),
+            boxShadow: ChartTheme.cardShadow,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                _circleButton(
+                  icon: Icons.arrow_back_ios_new_rounded,
+                  onPressed:
+                      widget.onBack ?? () => Navigator.of(context).maybePop(),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: GestureDetector(
+                    onHorizontalDragEnd: (details) {
+                      final velocity = details.velocity.pixelsPerSecond.dx;
+                      if (velocity < -_swipeThreshold && widget.onNext != null) {
+                        widget.onNext!();
+                      } else if (velocity > _swipeThreshold &&
+                          widget.onPrev != null) {
+                        widget.onPrev!();
+                      }
+                    },
+                    child: Row(
+                      children: [
+                        if (widget.onPrev != null)
+                          _miniSwitchButton(
+                            icon: Icons.chevron_left_rounded,
+                            onPressed: widget.onPrev!,
+                          ),
+                        Expanded(
+                          child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (widget.onPrev != null) ...[
-                                _iconButton(
-                                  icon: Icons.chevron_left,
-                                  size: 26,
-                                  onPressed: widget.onPrev!,
-                                ),
-                                const SizedBox(width: 4),
-                              ],
-                              Flexible(
-                                child: Text(
-                                  widget.symbol,
-                                  style: const TextStyle(
-                                    color: ChartTheme.up,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                    fontFamily: ChartTheme.fontMono,
-                                    fontFeatures: [ChartTheme.tabularFigures],
-                                    letterSpacing: 0.6,
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      widget.symbol,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: ChartTheme.textPrimary,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w800,
+                                        fontFamily: ChartTheme.fontMono,
+                                        fontFeatures: [
+                                          ChartTheme.tabularFigures,
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: ChartTheme.tabSelectedBg,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: const Text(
+                                      'US',
+                                      style: TextStyle(
+                                        color: ChartTheme.accentGold,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              if (widget.onNext != null) ...[
-                                const SizedBox(width: 4),
-                                _iconButton(
-                                  icon: Icons.chevron_right,
-                                  size: 26,
-                                  onPressed: widget.onNext!,
+                              if (subtitle != null && subtitle.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    subtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: ChartTheme.textSecondary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
-                              ],
                             ],
                           ),
-                          if (subtitle != null &&
-                              subtitle.isNotEmpty &&
-                              subtitle.toUpperCase() != widget.symbol.toUpperCase()) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle,
-                              style: const TextStyle(
-                                color: ChartTheme.textSecondary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ],
-                      ),
+                        ),
+                        if (widget.onNext != null)
+                          _miniSwitchButton(
+                            icon: Icons.chevron_right_rounded,
+                            onPressed: widget.onNext!,
+                          ),
+                      ],
                     ),
                   ),
-                  Tooltip(
-                    message: _inWatchlist
-                        ? AppLocalizations.of(context)!.watchlistRemove
-                        : AppLocalizations.of(context)!.searchAddWatchlist,
-                    child: _iconButton(
-                      icon: _inWatchlist ? Icons.star : Icons.star_border_outlined,
-                      size: 22,
-                      color: _inWatchlist ? ChartTheme.accentGold : ChartTheme.textPrimary,
-                      onPressed: _toggleWatchlist,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                _circleButton(
+                  icon: _inWatchlist
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                  color:
+                      _inWatchlist ? ChartTheme.accentGold : ChartTheme.textPrimary,
+                  onPressed: _toggleWatchlist,
+                ),
+              ],
             ),
           ),
         ),
@@ -197,22 +209,41 @@ class _DetailHeaderState extends State<DetailHeader> {
     );
   }
 
-  Widget _iconButton({
+  Widget _circleButton({
     required IconData icon,
-    required double size,
     required VoidCallback onPressed,
     Color? color,
   }) {
     return Material(
-      color: Colors.transparent,
+      color: ChartTheme.surface2,
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(ChartTheme.radiusButton),
+        borderRadius: BorderRadius.circular(12),
         child: SizedBox(
-          width: 36,
-          height: 36,
-          child: Center(
-            child: Icon(icon, size: size, color: color ?? ChartTheme.textPrimary),
+          width: 42,
+          height: 42,
+          child: Icon(icon, size: 20, color: color ?? ChartTheme.textPrimary),
+        ),
+      ),
+    );
+  }
+
+  Widget _miniSwitchButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(999),
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: Icon(icon, color: ChartTheme.textSecondary),
           ),
         ),
       ),
