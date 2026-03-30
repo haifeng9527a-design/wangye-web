@@ -1485,15 +1485,6 @@ class _StockChartPageState extends State<StockChartPage>
   static const double _volumeHeight = 56.0;
   static const double _timeAxisHeight = 22.0;
 
-  String _formatChartTime(double timeSec) {
-    final d = DateTime.fromMillisecondsSinceEpoch((timeSec * 1000).toInt());
-    if (_klineInterval == '1week') {
-      return '${d.year}/${d.month.toString().padLeft(2, '0')}';
-    }
-    if (_klineInterval == '1day') {
-      return '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
-    }
-    return '${d.month.toString().padLeft(2, '0')}/${d.day} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
   }
 
 }
