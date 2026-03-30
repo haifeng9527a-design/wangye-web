@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+
+on_error() {
+  local exit_code=$?
+  echo "Render build failed with exit code ${exit_code}." >&2
+  echo "Build phase: ${CURRENT_STEP:-unknown}" >&2
+  exit "$exit_code"
+}
+
+trap on_error ERR
 
 FLUTTER_VERSION="${FLUTTER_VERSION:-3.41.5}"
 FLUTTER_ROOT="${FLUTTER_ROOT:-$PWD/.flutter-sdk}"
@@ -42,7 +51,18 @@ write_env_var "APP_DOWNLOAD_URL" "${APP_DOWNLOAD_URL:-}"
 write_env_var "WEBVIEW_USER_PAGE_URL" "${WEBVIEW_USER_PAGE_URL:-}"
 write_env_var "LOCAL_DEV_MODE" "${LOCAL_DEV_MODE:-false}"
 
+CURRENT_STEP="flutter --version"
+echo "==> $CURRENT_STEP"
 flutter --version
+
+CURRENT_STEP="flutter config --enable-web"
+echo "==> $CURRENT_STEP"
 flutter config --enable-web
+
+CURRENT_STEP="flutter pub get"
+echo "==> $CURRENT_STEP"
 flutter pub get
-flutter build web --release
+
+CURRENT_STEP="flutter build web --release --verbose"
+echo "==> $CURRENT_STEP"
+flutter build web --release --verbose
