@@ -80,6 +80,7 @@ class _GenericChartPageState extends State<GenericChartPage>
   MarketQuote? _quote;
   List<ChartCandle> _intraday = [];
   List<ChartCandle> _daily = [];
+  double? _intradaySessionPrevClose;
   late final ChartViewportController _dailyController;
   bool _dailyLoadingMore = false;
   int? _lastLoadedEarliestTs;
@@ -121,6 +122,19 @@ class _GenericChartPageState extends State<GenericChartPage>
       default:
         return null;
     }
+  }
+
+  bool get _isSessionBoundMarket => !_is24HourMarket;
+
+  bool get _is24HourMarket {
+    final symbol = _effectiveSymbol.trim().toUpperCase();
+    return symbol.contains('/');
+  }
+
+  int _resolvedIntradayLastDays() {
+    final fromPeriod = _intradayLastDays(_chartPeriod);
+    if (fromPeriod != null) return fromPeriod;
+    return _isSessionBoundMarket ? 3 : 1;
   }
 
   static String _klineToInterval(String t) {
@@ -206,6 +220,7 @@ class _GenericChartPageState extends State<GenericChartPage>
         _quote = cached.quote;
         _intraday = List.from(cached.intraday);
         _daily = List.from(cached.daily);
+        _intradaySessionPrevClose = cached.quote?.prevClose;
         _chartPeriod = cached.chartPeriod;
         _klineInterval = cached.klineTimespan;
         _loading = false;
@@ -484,6 +499,7 @@ class _GenericChartPageState extends State<GenericChartPage>
       if (q.name != null && q.name!.isNotEmpty) {
         _currentName = q.name!;
       }
+      _applyDerivedQuoteMetrics();
     });
     _saveToCache(sym);
   }
@@ -491,7 +507,7 @@ class _GenericChartPageState extends State<GenericChartPage>
   Future<void> _refreshChartsSilently() async {
     final sym = _effectiveSymbol.trim();
     if (sym.isEmpty) return;
-    final lastDays = _intradayLastDays(_chartPeriod);
+    final lastDays = _resolvedIntradayLastDays();
     final intra = await _market.getCandles(
       sym,
       _intradayToInterval(_chartPeriod),
@@ -506,14 +522,18 @@ class _GenericChartPageState extends State<GenericChartPage>
       return;
     }
     if (intra.isEmpty && day.isEmpty) return;
+    final preparedIntraday = _prepareIntradayCandles(intra);
+    final derivedPrevClose = _previousSessionClose(intra, preparedIntraday);
     setState(() {
       if (intra.isNotEmpty) {
-        _intraday = intra;
+        _intraday = preparedIntraday;
+        _intradaySessionPrevClose = derivedPrevClose ?? _intradaySessionPrevClose;
       }
       if (day.isNotEmpty) {
         _daily = day;
         _dailyController.initFromCandlesLength(day.length);
       }
+      _applyDerivedQuoteMetrics();
     });
     _saveToCache(sym);
   }
@@ -545,7 +565,7 @@ class _GenericChartPageState extends State<GenericChartPage>
     final sym = _effectiveSymbol.trim();
     _startRealtimeForCurrentSymbol();
     final q = await _market.getQuote(sym, realtime: true);
-    final lastDays = _intradayLastDays(_chartPeriod);
+    final lastDays = _resolvedIntradayLastDays();
     final intra = await _market.getCandles(
       sym,
       _intradayToInterval(_chartPeriod),
@@ -555,20 +575,180 @@ class _GenericChartPageState extends State<GenericChartPage>
       sym,
       _klineToInterval(_klineInterval),
     );
+    final preparedIntraday = _prepareIntradayCandles(intra);
+    final derivedPrevClose = _previousSessionClose(intra, preparedIntraday);
     if (!mounted) return;
     setState(() {
       _quote = q;
       if (!q.hasError && q.price > 0) {
         _lastQuoteUpdatedAt = DateTime.now();
       }
-      _intraday = intra;
+      _intraday = preparedIntraday;
       _daily = day;
+      _intradaySessionPrevClose = derivedPrevClose ?? q.prevClose;
       _lastLoadedEarliestTs = null;
       _dailyController.initFromCandlesLength(day.length);
+      _applyDerivedQuoteMetrics();
       _loading = false;
       if (q.name != null && q.name!.isNotEmpty) _currentName = q.name!;
     });
     _saveToCache(sym);
+  }
+
+  static DateTime _toUsEastern(DateTime utc) {
+    final isEDT = _isUsEasternDST(utc.toUtc());
+    final offsetHours = isEDT ? 4 : 5;
+    return utc.toUtc().subtract(Duration(hours: offsetHours));
+  }
+
+  static bool _isUsEasternDST(DateTime utc) {
+    final y = utc.year;
+    final marchSecondSun = _nthSundayOfMonth(y, 3, 2);
+    final novFirstSun = _nthSundayOfMonth(y, 11, 1);
+    final at = DateTime.utc(y, utc.month, utc.day);
+    return !at.isBefore(marchSecondSun) && at.isBefore(novFirstSun);
+  }
+
+  static DateTime _nthSundayOfMonth(int year, int month, int n) {
+    var d = DateTime.utc(year, month, 1);
+    var count = 0;
+    while (d.month == month) {
+      if (d.weekday == DateTime.sunday) {
+        count++;
+        if (count == n) return d;
+      }
+      d = d.add(const Duration(days: 1));
+    }
+    return DateTime.utc(year, month, 1);
+  }
+
+  static bool _isRegularUsMarketOpenNow() {
+    final nowEt = _toUsEastern(DateTime.now().toUtc());
+    if (nowEt.weekday == DateTime.saturday || nowEt.weekday == DateTime.sunday) {
+      return false;
+    }
+    final minutes = nowEt.hour * 60 + nowEt.minute;
+    return minutes >= (9 * 60 + 30) && minutes <= (16 * 60);
+  }
+
+  static int _etSessionKey(double timeSec) {
+    final et = _toUsEastern(
+      DateTime.fromMillisecondsSinceEpoch((timeSec * 1000).round(), isUtc: true),
+    );
+    return et.year * 10000 + et.month * 100 + et.day;
+  }
+
+  List<ChartCandle> _prepareIntradayCandles(List<ChartCandle> source) {
+    final sorted = List<ChartCandle>.from(source)
+      ..sort((a, b) => a.time.compareTo(b.time));
+    if (sorted.isEmpty) return sorted;
+    if (!_isSessionBoundMarket) return sorted;
+    return _selectPreferredIntradaySession(sorted);
+  }
+
+  List<ChartCandle> _selectPreferredIntradaySession(List<ChartCandle> source) {
+    if (source.isEmpty) return source;
+    final groups = <int, List<ChartCandle>>{};
+    for (final candle in source) {
+      groups.putIfAbsent(_etSessionKey(candle.time), () => <ChartCandle>[]).add(candle);
+    }
+    final sessionKeys = groups.keys.toList()..sort();
+    if (sessionKeys.isEmpty) return source;
+    final nowOpen = _isRegularUsMarketOpenNow();
+    final todayKey = _etSessionKey(DateTime.now().toUtc().millisecondsSinceEpoch / 1000.0);
+    if (nowOpen && groups.containsKey(todayKey) && groups[todayKey]!.isNotEmpty) {
+      return groups[todayKey]!..sort((a, b) => a.time.compareTo(b.time));
+    }
+    for (var i = sessionKeys.length - 1; i >= 0; i--) {
+      final key = sessionKeys[i];
+      if (key == todayKey) continue;
+      final session = groups[key];
+      if (session != null && session.isNotEmpty) {
+        session.sort((a, b) => a.time.compareTo(b.time));
+        return session;
+      }
+    }
+    final fallback = groups[sessionKeys.last]!;
+    fallback.sort((a, b) => a.time.compareTo(b.time));
+    return fallback;
+  }
+
+  double? _previousSessionClose(List<ChartCandle> source, List<ChartCandle> selected) {
+    if (source.isEmpty || selected.isEmpty || !_isSessionBoundMarket) return null;
+    final groups = <int, List<ChartCandle>>{};
+    for (final candle in source) {
+      groups.putIfAbsent(_etSessionKey(candle.time), () => <ChartCandle>[]).add(candle);
+    }
+    final keys = groups.keys.toList()..sort();
+    final selectedKey = _etSessionKey(selected.last.time);
+    final selectedIndex = keys.indexOf(selectedKey);
+    if (selectedIndex <= 0) return null;
+    for (var i = selectedIndex - 1; i >= 0; i--) {
+      final session = groups[keys[i]];
+      if (session == null || session.isEmpty) continue;
+      session.sort((a, b) => a.time.compareTo(b.time));
+      final close = session.last.close;
+      if (close > 0) return close;
+    }
+    return null;
+  }
+
+  void _applyDerivedQuoteMetrics() {
+    final base = _quote;
+    final intraday = _intraday;
+    final daily = _daily;
+    final hasIntraday = intraday.isNotEmpty;
+    final hasDaily = daily.isNotEmpty;
+    if (base == null && !hasIntraday && !hasDaily) return;
+
+    final current = hasIntraday
+        ? intraday.last.close
+        : (hasDaily ? daily.last.close : (base?.price ?? 0));
+    final open = hasIntraday
+        ? intraday.first.open
+        : (base?.open ?? (hasDaily ? daily.last.open : null));
+    final high = hasIntraday
+        ? intraday.map((c) => c.high).reduce((a, b) => a > b ? a : b)
+        : (base?.high ?? (hasDaily ? daily.last.high : null));
+    final low = hasIntraday
+        ? intraday.map((c) => c.low).reduce((a, b) => a < b ? a : b)
+        : (base?.low ?? (hasDaily ? daily.last.low : null));
+    final volume = hasIntraday
+        ? intraday.fold<int>(0, (sum, candle) => sum + (candle.volume ?? 0))
+        : (base?.volume ?? (hasDaily ? daily.last.volume : null));
+
+    final previousClose = hasIntraday
+        ? (_intradaySessionPrevClose ??
+            base?.prevClose ??
+            ((base != null && base.price > 0 && base.change != 0) ? base.price - base.change : null) ??
+            open)
+        : (base?.prevClose ??
+            ((base != null && base.price > 0 && base.change != 0) ? base.price - base.change : null));
+
+    final change = (previousClose != null && previousClose > 0)
+        ? current - previousClose
+        : (base?.change ?? 0);
+    final changePercent = (previousClose != null && previousClose > 0)
+        ? ((change / previousClose) * 100)
+        : (base?.changePercent ?? 0);
+
+    _quote = MarketQuote(
+      symbol: _effectiveSymbol,
+      name: (base?.name != null && base!.name!.isNotEmpty) ? base.name : _effectiveName,
+      price: current > 0 ? current : (base?.price ?? 0),
+      change: change,
+      changePercent: changePercent,
+      open: open ?? base?.open,
+      high: high ?? base?.high,
+      low: low ?? base?.low,
+      volume: (volume != null && volume > 0) ? volume : base?.volume,
+      bid: base?.bid,
+      ask: base?.ask,
+      bidSize: base?.bidSize,
+      askSize: base?.askSize,
+      prevClose: previousClose ?? base?.prevClose,
+      errorReason: base?.hasError == true && current <= 0 ? base?.errorReason : null,
+    );
   }
 
   Future<void> _loadDailyOlder(int earliestTimestampMs) async {
@@ -681,7 +861,7 @@ class _GenericChartPageState extends State<GenericChartPage>
                             timeAxisHeight: timeAxisHeightIntraday,
                             volumeHeight: intradayVolumeHeight,
                             periodLabel: '1m',
-                            useSessionMarketHours: false,
+                            useSessionMarketHours: _isSessionBoundMarket,
                           ),
                         ),
                       ],
@@ -1061,11 +1241,11 @@ class _GenericChartPageState extends State<GenericChartPage>
 
   String? _statusLabel() {
     final l10n = AppLocalizations.of(context)!;
-    final now = DateTime.now();
-    final hour = now.hour;
-    final minute = now.minute;
-    if (hour < 9 || (hour == 9 && minute < 30)) return l10n.chartPreMarket;
-    if (hour > 16 || (hour == 16 && minute > 0)) return l10n.chartClosed;
+    if (_is24HourMarket) return '24H';
+    final nowEt = _toUsEastern(DateTime.now().toUtc());
+    final minutes = nowEt.hour * 60 + nowEt.minute;
+    if (minutes < (9 * 60 + 30)) return l10n.chartPreMarket;
+    if (minutes > (16 * 60)) return l10n.chartClosed;
     return l10n.chartIntraday;
   }
 
