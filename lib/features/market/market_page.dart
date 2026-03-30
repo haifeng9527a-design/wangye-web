@@ -3402,7 +3402,6 @@ class _UsStocksTabState extends State<_UsStocksTab> {
   }
 
   /// 「全部」列表视口高度：PC 固定，移动端按可视区域动态计算
-  static const double _allListHeightPc = 700;
   static const double _allListRowHeightPc = 44;
   static const double _allListRowHeightMobile = 48;
 
@@ -3947,8 +3946,17 @@ class _UsStocksTabState extends State<_UsStocksTab> {
     return estimated.clamp(420.0, 620.0);
   }
 
+  double get _pcListViewportHeight {
+    final mediaQuery = MediaQuery.of(context);
+    final estimated = mediaQuery.size.height -
+        mediaQuery.padding.top -
+        mediaQuery.padding.bottom -
+        260;
+    return estimated.clamp(560.0, 1200.0);
+  }
+
   double get _allListHeight =>
-      _isPcList ? _allListHeightPc : _mobileListViewportHeight;
+      _isPcList ? _pcListViewportHeight : _mobileListViewportHeight;
   double get _allListRowHeight =>
       _isPcList ? _allListRowHeightPc : _allListRowHeightMobile;
 
