@@ -3567,6 +3567,7 @@ class _UsStocksTabState extends State<_UsStocksTab> {
     if (_lastVisibleStart != start || _lastVisibleEnd != end) {
       _lastVisibleStart = start;
       _lastVisibleEnd = end;
+      _scheduleVisibleRangeLatestFetch(start, end);
     }
     // 滚动到底部附近时加载下一页（距底部 10 行内触发）
     if (_hasMoreTickers && !_loadingMore && end >= display.length - 10) {
@@ -3604,11 +3605,26 @@ class _UsStocksTabState extends State<_UsStocksTab> {
     // 美股列表关闭可视区轮询拉取：只保留范围记录，报价由 WebSocket 推送更新。
     _pendingFetchStart = start;
     _pendingFetchEnd = end;
+    _visibleRangeFetchDebounce?.cancel();
+    final delay = immediate ? Duration.zero : const Duration(milliseconds: 220);
+    _visibleRangeFetchDebounce = Timer(delay, () {
+      _visibleRangeFetchDebounce = null;
+      if (!mounted || _listMode != 0 || _pendingFetchStart == null || _pendingFetchEnd == null) {
+        return;
+      }
+      unawaited(_loadQuotesForVisibleRange(_pendingFetchStart!, _pendingFetchEnd!));
+    });
   }
 
   /// 美股列表不再使用定时轮询：改为首次拉取 + WebSocket 实时推送更新。
   void _startQuoteRefreshTimer() {
     _stopQuoteRefreshTimer();
+    _quoteRefreshTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (!mounted || _listMode != 0 || _pendingFetchStart == null || _pendingFetchEnd == null) {
+        return;
+      }
+      unawaited(_loadQuotesForVisibleRange(_pendingFetchStart!, _pendingFetchEnd!));
+    });
   }
 
   void _stopQuoteRefreshTimer() {
@@ -3796,10 +3812,13 @@ class _UsStocksTabState extends State<_UsStocksTab> {
     final end = (sorted.isEmpty ? 0 : endIndex.clamp(0, sorted.length - 1));
     _lastVisibleStart = 0;
     _lastVisibleEnd = end;
+    _pendingFetchStart = 0;
+    _pendingFetchEnd = end;
     final visibleSymbols = sorted.isEmpty
         ? <String>[]
         : sorted.sublist(0, end + 1).map((t) => t.symbol).toList();
     _resubscribeVisibleSymbols(visibleSymbols);
+    _scheduleVisibleRangeLatestFetch(0, end, immediate: true);
     // 不做分块轮询拉取，仅对首屏缺失项补拉一次；后续由 WebSocket 推送更新。
     unawaited(_fetchMissingPageQuotesOnce(visibleSymbols));
     _startQuoteRefreshTimer();
@@ -3971,6 +3990,9 @@ class _UsStocksTabState extends State<_UsStocksTab> {
       },
       color: TvTheme.positive,
       child: ListView(
+        physics: _isPc
+            ? const NeverScrollableScrollPhysics()
+            : const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(_isPc ? TvTheme.pagePadding : 16, 12,
             _isPc ? TvTheme.pagePadding : 16, 24),
         children: [
