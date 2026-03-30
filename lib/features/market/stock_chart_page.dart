@@ -473,19 +473,34 @@ class _StockChartPageState extends State<StockChartPage>
   Future<void> _loadQuote() async {
     final quote = await _market.getQuote(_effectiveSymbol, realtime: true);
     final prev = _market.polygonAvailable ? await _market.getPreviousClose(_effectiveSymbol) : null;
+    final isMarketOpen = _isRegularUsMarketOpenNow();
     if (!mounted) return;
     setState(() {
       if (!quote.hasError) {
-        _currentPrice = quote.price > 0 ? quote.price : _currentPrice;
-        _changePercent = quote.changePercent;
-        if (quote.open != null && quote.open! > 0) _dayOpen = quote.open;
-        if (quote.high != null && quote.high! > 0) _dayHigh = quote.high;
-        if (quote.low != null && quote.low! > 0) _dayLow = quote.low;
-        if (quote.volume != null && quote.volume! > 0) _dayVolume = quote.volume;
-        if (quote.price > 0 && quote.change != 0) _prevClose = quote.price - quote.change;
+        if (quote.price > 0 && (isMarketOpen || _currentPrice == null || _currentPrice! <= 0)) {
+          _currentPrice = quote.price;
+        }
+        if (quote.changePercent != null && (isMarketOpen || _changePercent == null)) {
+          _changePercent = quote.changePercent;
+        }
+        if (quote.open != null && quote.open! > 0 && (isMarketOpen || _dayOpen == null || _dayOpen! <= 0)) {
+          _dayOpen = quote.open;
+        }
+        if (quote.high != null && quote.high! > 0 && (isMarketOpen || _dayHigh == null || _dayHigh! <= 0)) {
+          _dayHigh = quote.high;
+        }
+        if (quote.low != null && quote.low! > 0 && (isMarketOpen || _dayLow == null || _dayLow! <= 0)) {
+          _dayLow = quote.low;
+        }
+        if (quote.volume != null && quote.volume! > 0 && (isMarketOpen || _dayVolume == null || _dayVolume! <= 0)) {
+          _dayVolume = quote.volume;
+        }
+        if ((_prevClose == null || _prevClose! <= 0) && quote.price > 0 && quote.change != 0) {
+          _prevClose = quote.price - quote.change;
+        }
         if (quote.name != null && quote.name!.isNotEmpty) _stockName = quote.name;
       }
-      if (_prevClose == null) _prevClose = prev;
+      if (_prevClose == null || _prevClose! <= 0) _prevClose = prev;
     });
   }
 
@@ -497,15 +512,15 @@ class _StockChartPageState extends State<StockChartPage>
   }
 
   Future<void> _loadTodayOHLC() async {
-    if (!_market.polygonAvailable) return;
+    if (!_market.polygonAvailable || !_isRegularUsMarketOpenNow()) return;
     final snap = await _market.getDaySnapshot(_effectiveSymbol);
     if (!mounted) return;
     if (snap != null) {
       setState(() {
-        _dayOpen = snap.dayOpen;
-        _dayHigh = snap.dayHigh;
-        _dayLow = snap.dayLow;
-        _dayVolume = snap.dayVolume;
+        if (snap.dayOpen != null && snap.dayOpen! > 0) _dayOpen = snap.dayOpen;
+        if (snap.dayHigh != null && snap.dayHigh! > 0) _dayHigh = snap.dayHigh;
+        if (snap.dayLow != null && snap.dayLow! > 0) _dayLow = snap.dayLow;
+        if (snap.dayVolume != null && snap.dayVolume! > 0) _dayVolume = snap.dayVolume;
         if (_prevClose == null && snap.prevClose != null) _prevClose = snap.prevClose;
       });
       return;
@@ -524,9 +539,9 @@ class _StockChartPageState extends State<StockChartPage>
     if (!mounted || list.isEmpty) return;
     final bar = list.last;
     setState(() {
-      _dayOpen = bar.open;
-      _dayHigh = bar.high;
-      _dayLow = bar.low;
+      if (bar.open > 0) _dayOpen = bar.open;
+      if (bar.high > 0) _dayHigh = bar.high;
+      if (bar.low > 0) _dayLow = bar.low;
       _dayVolume = bar.volume != null && bar.volume! > 0 ? bar.volume : _dayVolume;
     });
   }
@@ -534,7 +549,7 @@ class _StockChartPageState extends State<StockChartPage>
   /// 鍒嗘椂鍥撅紙浠?1 鍒嗭級锛氭姌绾垮浘锛屽綋鏃ユ暟鎹?
   Future<void> _loadIntraday() async {
     final sym = _effectiveSymbol.trim().toUpperCase();
-    const lastDays = 1;
+    const lastDays = 3;
     const interval = '1min';
     List<ChartCandle> list = [];
     if (_market.useBackend) {
@@ -562,7 +577,19 @@ class _StockChartPageState extends State<StockChartPage>
       }
     }
     list.sort((a, b) => a.time.compareTo(b.time));
-    if (mounted) setState(() => _candlesIntraday = list);
+    final preferred = _selectPreferredIntradaySession(list);
+    final selectedSessionKey = preferred.isNotEmpty ? _etSessionKey(preferred.last.time) : null;
+    final previousSessionClose = selectedSessionKey == null ? null : _previousSessionClose(list, selectedSessionKey);
+    final forceSessionValues = !_isRegularUsMarketOpenNow();
+    if (!mounted) return;
+    setState(() {
+      _candlesIntraday = preferred;
+      _applyIntradayDerivedMetrics(
+        preferred,
+        previousClose: previousSessionClose,
+        forceSessionValues: forceSessionValues,
+      );
+    });
   }
 
   /// Tab 0锛? 鍒嗗垎鏃舵姌绾垮浘
@@ -1026,6 +1053,109 @@ class _StockChartPageState extends State<StockChartPage>
       d = d.add(const Duration(days: 1));
     }
     return DateTime.utc(year, month, 1);
+  }
+
+  static DateTime _toUsEastern(DateTime utc) {
+    final isEDT = _isUsEasternDST(utc.toUtc());
+    final offsetHours = isEDT ? 4 : 5;
+    return utc.toUtc().subtract(Duration(hours: offsetHours));
+  }
+
+  static bool _isRegularUsMarketOpenNow() {
+    final nowEt = _toUsEastern(DateTime.now().toUtc());
+    if (nowEt.weekday == DateTime.saturday || nowEt.weekday == DateTime.sunday) {
+      return false;
+    }
+    final minutes = nowEt.hour * 60 + nowEt.minute;
+    return minutes >= (9 * 60 + 30) && minutes <= (16 * 60);
+  }
+
+  static int _etSessionKey(double timeSec) {
+    final et = _toUsEastern(
+      DateTime.fromMillisecondsSinceEpoch((timeSec * 1000).round(), isUtc: true),
+    );
+    return et.year * 10000 + et.month * 100 + et.day;
+  }
+
+  List<ChartCandle> _selectPreferredIntradaySession(List<ChartCandle> source) {
+    if (source.isEmpty) return source;
+    final groups = <int, List<ChartCandle>>{};
+    for (final candle in source) {
+      groups.putIfAbsent(_etSessionKey(candle.time), () => <ChartCandle>[]).add(candle);
+    }
+    final sessionKeys = groups.keys.toList()..sort();
+    if (sessionKeys.isEmpty) return source;
+    final nowOpen = _isRegularUsMarketOpenNow();
+    final todayKey = _etSessionKey(DateTime.now().toUtc().millisecondsSinceEpoch / 1000.0);
+    if (nowOpen && groups.containsKey(todayKey) && groups[todayKey]!.isNotEmpty) {
+      return groups[todayKey]!..sort((a, b) => a.time.compareTo(b.time));
+    }
+    for (var i = sessionKeys.length - 1; i >= 0; i--) {
+      final key = sessionKeys[i];
+      if (key == todayKey) continue;
+      final session = groups[key];
+      if (session != null && session.isNotEmpty) {
+        session.sort((a, b) => a.time.compareTo(b.time));
+        return session;
+      }
+    }
+    final fallback = groups[sessionKeys.last]!;
+    fallback.sort((a, b) => a.time.compareTo(b.time));
+    return fallback;
+  }
+
+  double? _previousSessionClose(List<ChartCandle> source, int selectedSessionKey) {
+    final groups = <int, List<ChartCandle>>{};
+    for (final candle in source) {
+      groups.putIfAbsent(_etSessionKey(candle.time), () => <ChartCandle>[]).add(candle);
+    }
+    final keys = groups.keys.toList()..sort();
+    final selectedIndex = keys.indexOf(selectedSessionKey);
+    if (selectedIndex <= 0) return null;
+    for (var i = selectedIndex - 1; i >= 0; i--) {
+      final session = groups[keys[i]];
+      if (session == null || session.isEmpty) continue;
+      session.sort((a, b) => a.time.compareTo(b.time));
+      final close = session.last.close;
+      if (close > 0) return close;
+    }
+    return null;
+  }
+
+  void _applyIntradayDerivedMetrics(
+    List<ChartCandle> candles, {
+    double? previousClose,
+    bool forceSessionValues = false,
+  }) {
+    if (candles.isEmpty) return;
+    final first = candles.first;
+    final last = candles.last;
+    final high = candles.map((c) => c.high).reduce((a, b) => a > b ? a : b);
+    final low = candles.map((c) => c.low).reduce((a, b) => a < b ? a : b);
+    final totalVolume = candles.fold<int>(0, (sum, candle) => sum + (candle.volume ?? 0));
+    if (forceSessionValues || _dayOpen == null || _dayOpen! <= 0) {
+      _dayOpen = first.open > 0 ? first.open : _dayOpen;
+    }
+    if (forceSessionValues || _dayHigh == null || _dayHigh! <= 0) {
+      _dayHigh = high > 0 ? high : _dayHigh;
+    }
+    if (forceSessionValues || _dayLow == null || _dayLow! <= 0) {
+      _dayLow = low > 0 ? low : _dayLow;
+    }
+    if (totalVolume > 0 && (forceSessionValues || _dayVolume == null || _dayVolume! <= 0)) {
+      _dayVolume = totalVolume;
+    }
+    if ((forceSessionValues || _currentPrice == null || _currentPrice! <= 0) && last.close > 0) {
+      _currentPrice = last.close;
+    }
+    if (forceSessionValues || _prevClose == null || _prevClose! <= 0) {
+      _prevClose = previousClose != null && previousClose > 0
+          ? previousClose
+          : (first.open > 0 ? first.open : _prevClose);
+    }
+    if (_prevClose != null && _prevClose! > 0 && _currentPrice != null && _currentPrice! > 0) {
+      _changePercent = ((_currentPrice! - _prevClose!) / _prevClose!) * 100;
+    }
   }
 
   Widget _infoChip(String label, {required Color tone}) {
