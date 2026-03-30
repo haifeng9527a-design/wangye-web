@@ -890,6 +890,7 @@ class _StockChartPageState extends State<StockChartPage>
                           overlayIndicator: _overlayIndicator,
                           subChartIndicator: _subChartIndicator,
                           showPrevCloseLine: _showPrevCloseLine,
+                          desktopMode: false,
                           onOverlayChanged: (v) => setState(() => _overlayIndicator = v),
                           onSubChartChanged: (v) => setState(() => _subChartIndicator = v),
                           onShowPrevCloseLineChanged: (v) => setState(() => _showPrevCloseLine = v),
@@ -1181,61 +1182,64 @@ class _StockChartPageState extends State<StockChartPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              _effectiveSymbol,
+              style: const TextStyle(
+                color: ChartTheme.textPrimary,
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                fontFamily: ChartTheme.fontMono,
+                fontFeatures: [ChartTheme.tabularFigures],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              widget.name ?? _stockName ?? '',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: ChartTheme.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 12),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _effectiveSymbol,
-                        style: const TextStyle(
-                          color: ChartTheme.textPrimary,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          fontFamily: ChartTheme.fontMono,
-                          fontFeatures: [ChartTheme.tabularFigures],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.name ?? _stockName ?? '',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: ChartTheme.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: tone.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: tone.withValues(alpha: 0.24)),
-                  ),
                   child: Text(
-                    _signedPercentMetric(_changePercent),
+                    _currentPrice != null
+                        ? ChartTheme.formatPrice(_currentPrice!)
+                        : '—',
                     style: TextStyle(
                       color: tone,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 24,
+                      height: 1,
+                      fontWeight: FontWeight.w800,
                       fontFamily: ChartTheme.fontMono,
                       fontFeatures: const [ChartTheme.tabularFigures],
                     ),
                   ),
                 ),
+                Text(
+                  '${_signedMetric(changeVal)}  ${_signedPercentMetric(_changePercent)}',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: tone,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: ChartTheme.fontMono,
+                    fontFeatures: const [ChartTheme.tabularFigures],
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Container(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
               decoration: BoxDecoration(
                 color: ChartTheme.surface2,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: ChartTheme.borderSubtle),
               ),
               child: Column(
@@ -1250,7 +1254,7 @@ class _StockChartPageState extends State<StockChartPage>
                       letterSpacing: 0.8,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   for (var i = 0; i < metrics.length; i++)
                     _sidebarMetricRow(
                       metrics[i].$1,
@@ -1268,6 +1272,7 @@ class _StockChartPageState extends State<StockChartPage>
                 overlayIndicator: _overlayIndicator,
                 subChartIndicator: _subChartIndicator,
                 showPrevCloseLine: _showPrevCloseLine,
+                desktopMode: true,
                 onOverlayChanged: (v) => setState(() => _overlayIndicator = v),
                 onSubChartChanged: (v) => setState(() => _subChartIndicator = v),
                 onShowPrevCloseLineChanged: (v) =>
@@ -1321,7 +1326,7 @@ class _StockChartPageState extends State<StockChartPage>
 
   Widget _sidebarMetricRow(String label, String value, {bool emphasize = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
           Expanded(
@@ -1337,7 +1342,7 @@ class _StockChartPageState extends State<StockChartPage>
           Text(
             value,
             style: TextStyle(
-              color: emphasize ? ChartTheme.textPrimary : ChartTheme.textSecondary,
+              color: emphasize ? ChartTheme.up : ChartTheme.textPrimary,
               fontSize: emphasize ? 15 : 13,
               fontWeight: FontWeight.w700,
               fontFamily: ChartTheme.fontMono,

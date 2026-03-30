@@ -21,6 +21,7 @@ class BottomDetailTabs extends StatefulWidget {
     this.onSubChartChanged,
     this.onShowPrevCloseLineChanged,
     this.klineCandles = const [],
+    this.desktopMode = false,
   });
 
   final double? currentPrice;
@@ -32,6 +33,7 @@ class BottomDetailTabs extends StatefulWidget {
   final ValueChanged<String>? onSubChartChanged;
   final ValueChanged<bool>? onShowPrevCloseLineChanged;
   final List<ChartCandle> klineCandles;
+  final bool desktopMode;
 
   @override
   State<BottomDetailTabs> createState() => _BottomDetailTabsState();
@@ -124,19 +126,22 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
   @override
   Widget build(BuildContext context) {
     final labels = _labels(context);
+    final outerPadding = widget.desktopMode
+        ? const EdgeInsets.only(top: 2)
+        : const EdgeInsets.fromLTRB(16, 0, 16, 18);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+      padding: outerPadding,
       child: Container(
         decoration: BoxDecoration(
-          color: ChartTheme.cardBackground,
-          borderRadius: BorderRadius.circular(ChartTheme.radiusCard),
-          border: Border.all(color: ChartTheme.border),
-          boxShadow: ChartTheme.cardShadow,
+          color: widget.desktopMode ? Colors.transparent : ChartTheme.cardBackground,
+          borderRadius: BorderRadius.circular(widget.desktopMode ? 0 : ChartTheme.radiusCard),
+          border: widget.desktopMode ? null : Border.all(color: ChartTheme.border),
+          boxShadow: widget.desktopMode ? null : ChartTheme.cardShadow,
         ),
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+              padding: EdgeInsets.fromLTRB(widget.desktopMode ? 0 : 14, widget.desktopMode ? 0 : 14, widget.desktopMode ? 0 : 14, 0),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -155,18 +160,18 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
                             _stopOrderBookPolling();
                           }
                         },
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.circular(widget.desktopMode ? 10 : 999),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 160),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: widget.desktopMode ? 12 : 14,
+                            vertical: widget.desktopMode ? 8 : 10,
                           ),
                           decoration: BoxDecoration(
                             color: selected
                                 ? ChartTheme.tabSelectedBg
                                 : ChartTheme.surface2,
-                            borderRadius: BorderRadius.circular(999),
+                            borderRadius: BorderRadius.circular(widget.desktopMode ? 10 : 999),
                             border: Border.all(
                               color: selected
                                   ? ChartTheme.accentGold
@@ -179,7 +184,7 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
                               color: selected
                                   ? ChartTheme.textPrimary
                                   : ChartTheme.textSecondary,
-                              fontSize: 13,
+                              fontSize: widget.desktopMode ? 12 : 13,
                               fontWeight:
                                   selected ? FontWeight.w700 : FontWeight.w600,
                             ),
@@ -193,7 +198,7 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: EdgeInsets.fromLTRB(widget.desktopMode ? 0 : 14, 12, widget.desktopMode ? 0 : 14, widget.desktopMode ? 0 : 14),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 180),
                   child: _buildContent(context),
