@@ -817,159 +817,172 @@ class _StockChartPageState extends State<StockChartPage>
               );
             }
 
-            return SingleChildScrollView(
-              padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 12),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF111B26),
-                      ChartTheme.background,
-                      ChartTheme.background,
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
+            final pageBody = DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF111B26),
+                    ChartTheme.background,
+                    ChartTheme.background,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Column(
-                    children: [
-                      DetailHeader(
-                        symbol: _effectiveSymbol,
-                        name: widget.name ?? _stockName,
-                        onBack: () => Navigator.of(context).maybePop(),
-                        onPrev: _prevNextIndex > 0 ? _switchToPrev : null,
-                        onNext: _prevNextIndex >= 0 && _prevNextIndex < _symbolListLength - 1 ? _switchToNext : null,
-                      ),
-                      if (isDesktop)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: _buildMainChartPanel(
-                                  context,
-                                  chartContent: chartContent,
-                                  chartHeight: fixedChartHeight,
-                                  displayPrice: displayPrice,
-                                  changeVal: changeVal,
-                                  changePercent: changePercent,
-                                  statusLabel: statusLabel,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              SizedBox(
-                                width: constraints.maxWidth >= 1500 ? 360 : 340,
-                                height: detailPanelHeight,
-                                child: _buildRightQuotePanel(
-                                  displayPrice: displayPrice,
-                                  changeVal: changeVal,
-                                  changePercent: changePercent,
-                                ),
-                              ),
-                            ],
+              ),
+              child: isDesktop
+                  ? SizedBox(
+                      height: constraints.maxHeight,
+                      child: Column(
+                        children: [
+                          DetailHeader(
+                            symbol: _effectiveSymbol,
+                            name: widget.name ?? _stockName,
+                            onBack: () => Navigator.of(context).maybePop(),
+                            onPrev: _prevNextIndex > 0 ? _switchToPrev : null,
+                            onNext: _prevNextIndex >= 0 && _prevNextIndex < _symbolListLength - 1 ? _switchToNext : null,
                           ),
-                        ),
-                      if (!isDesktop)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: Row(
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: _buildMainChartPanel(
+                                      context,
+                                      chartContent: chartContent,
+                                      chartHeight: fixedChartHeight,
+                                      displayPrice: displayPrice,
+                                      changeVal: changeVal,
+                                      changePercent: changePercent,
+                                      statusLabel: statusLabel,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  SizedBox(
+                                    width: constraints.maxWidth >= 1500 ? 360 : 340,
+                                    child: _buildRightQuotePanel(
+                                      displayPrice: displayPrice,
+                                      changeVal: changeVal,
+                                      changePercent: changePercent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 12),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: Column(
                           children: [
-                            _infoChip(
-                              statusLabel ?? 'US Market',
-                              tone: ChartTheme.up,
+                            DetailHeader(
+                              symbol: _effectiveSymbol,
+                              name: widget.name ?? _stockName,
+                              onBack: () => Navigator.of(context).maybePop(),
+                              onPrev: _prevNextIndex > 0 ? _switchToPrev : null,
+                              onNext: _prevNextIndex >= 0 && _prevNextIndex < _symbolListLength - 1 ? _switchToNext : null,
                             ),
-                            const SizedBox(width: 8),
-                            _infoChip(
-                              'Symbol ${_effectiveSymbol}',
-                              tone: ChartTheme.accentGold,
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: Row(
+                                children: [
+                                  _infoChip(
+                                    statusLabel ?? 'US Market',
+                                    tone: ChartTheme.up,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _infoChip(
+                                    'Symbol ${_effectiveSymbol}',
+                                    tone: ChartTheme.accentGold,
+                                  ),
+                                  if (widget.isMockData) ...[
+                                    const SizedBox(width: 8),
+                                    _infoChip('Mock Data', tone: ChartTheme.down),
+                                  ],
+                                ],
+                              ),
                             ),
-                            if (widget.isMockData) ...[
-                              const SizedBox(width: 8),
-                              _infoChip('Mock Data', tone: ChartTheme.down),
-                            ],
+                            ChartModeTabs(
+                              tabIndex: _tabController.index,
+                              onTabChanged: (i) => _tabController.animateTo(i),
+                              isIntraday: _tabController.index == 0,
+                              intradayPeriod: _intradayInterval,
+                              klineTimespan: _klineInterval == '1day' ? 'day' : _klineInterval == '1week' ? 'week' : _klineInterval == '1month' ? 'month' : _klineInterval == '1year' ? 'year' : _klineInterval,
+                              onIntradayPeriodChanged: (_) {},
+                              onKlineTimespanChanged: (_) {},
+                              extendedKlineInterval: _extendedKlineInterval,
+                              onExtendedKlineChanged: (v) {
+                                if (_extendedKlineInterval != v) {
+                                  setState(() {
+                                    _extendedKlineInterval = v;
+                                    _klineInterval = v;
+                                    _chartLoading = true;
+                                  });
+                                  _loadKLine().then((_) {
+                                    if (mounted) setState(() => _chartLoading = false);
+                                  });
+                                }
+                              },
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: ChartTheme.cardBackground,
+                                  borderRadius: BorderRadius.circular(ChartTheme.radiusCard),
+                                  border: Border.all(color: ChartTheme.border),
+                                  boxShadow: ChartTheme.cardShadow,
+                                ),
+                                child: Column(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+                                      child: _buildStatsBar(),
+                                    ),
+                                    TvChartContainer(
+                                      edgeToEdge: true,
+                                      padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+                                      child: SizedBox(
+                                        height: fixedChartHeight,
+                                        child: ClipRRect(
+                                          borderRadius: const BorderRadius.vertical(
+                                            bottom: Radius.circular(18),
+                                          ),
+                                          child: chartContent,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              height: detailPanelHeight,
+                              child: BottomDetailTabs(
+                                symbol: _effectiveSymbol,
+                                currentPrice: _currentPrice,
+                                overlayIndicator: _overlayIndicator,
+                                subChartIndicator: _subChartIndicator,
+                                showPrevCloseLine: _showPrevCloseLine,
+                                desktopMode: false,
+                                onOverlayChanged: (v) => setState(() => _overlayIndicator = v),
+                                onSubChartChanged: (v) => setState(() => _subChartIndicator = v),
+                                onShowPrevCloseLineChanged: (v) => setState(() => _showPrevCloseLine = v),
+                                klineCandles: _candlesKLine,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      if (!isDesktop)
-                      ChartModeTabs(
-                        tabIndex: _tabController.index,
-                        onTabChanged: (i) => _tabController.animateTo(i),
-                        isIntraday: _tabController.index == 0,
-                        intradayPeriod: _intradayInterval,
-                        klineTimespan: _klineInterval == '1day' ? 'day' : _klineInterval == '1week' ? 'week' : _klineInterval == '1month' ? 'month' : _klineInterval == '1year' ? 'year' : _klineInterval,
-                        onIntradayPeriodChanged: (_) {},
-                        onKlineTimespanChanged: (_) {},
-                        extendedKlineInterval: _extendedKlineInterval,
-                        onExtendedKlineChanged: (v) {
-                          if (_extendedKlineInterval != v) {
-                            setState(() {
-                              _extendedKlineInterval = v;
-                              _klineInterval = v;
-                              _chartLoading = true;
-                            });
-                            _loadKLine().then((_) {
-                              if (mounted) setState(() => _chartLoading = false);
-                            });
-                          }
-                        },
-                      ),
-                      if (!isDesktop)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: ChartTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(ChartTheme.radiusCard),
-                            border: Border.all(color: ChartTheme.border),
-                            boxShadow: ChartTheme.cardShadow,
-                          ),
-                          child: Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
-                                child: _buildStatsBar(),
-                              ),
-                              TvChartContainer(
-                                edgeToEdge: true,
-                                padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
-                                child: SizedBox(
-                                  height: fixedChartHeight,
-                                  child: ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                      bottom: Radius.circular(18),
-                                    ),
-                                    child: chartContent,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (!isDesktop)
-                      SizedBox(
-                        height: detailPanelHeight,
-                        child: BottomDetailTabs(
-                          symbol: _effectiveSymbol,
-                          currentPrice: _currentPrice,
-                          overlayIndicator: _overlayIndicator,
-                          subChartIndicator: _subChartIndicator,
-                          showPrevCloseLine: _showPrevCloseLine,
-                          desktopMode: false,
-                          onOverlayChanged: (v) => setState(() => _overlayIndicator = v),
-                          onSubChartChanged: (v) => setState(() => _subChartIndicator = v),
-                          onShowPrevCloseLineChanged: (v) => setState(() => _showPrevCloseLine = v),
-                          klineCandles: _candlesKLine,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
             );
+
+            return pageBody;
           },
         ),
       ),
