@@ -597,7 +597,7 @@ class _StockChartPageState extends State<StockChartPage>
     if (list.isEmpty) {
       debugPrint('StockChartPage: K绾挎棤鏁版嵁 symbol=$sym interval=$interval');
       if (_market.useBackend && kDebugMode) {
-        debugPrint('  鈫?宸查厤缃悗绔紭鍏堬紝璇风‘璁わ細1) 鍚庣宸插惎鍔? 2) TONGXIN_API_URL 鍙闂?);
+        debugPrint('  Backend-first mode enabled. Confirm backend is running and TONGXIN_API_URL is reachable.');
       }
     }
     if (mounted) {
@@ -1490,7 +1490,6 @@ class _StockChartPageState extends State<StockChartPage>
 
   }
 
-}
 
 
 
