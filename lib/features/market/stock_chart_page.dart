@@ -135,7 +135,7 @@ class _StockChartPageState extends State<StockChartPage>
     super.initState();
     _currentSymbol = widget.symbol.trim().toUpperCase();
     _currentIndex = _prevNextIndex;
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 6, vsync: this, initialIndex: 1);
     _klineController = ChartViewportController(initialVisibleCount: 80, minVisibleCount: 30, maxVisibleCount: 400);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
@@ -377,6 +377,68 @@ class _StockChartPageState extends State<StockChartPage>
     final price = _currentPrice ?? _dayOpen ?? _prevClose;
     if (price == null || price <= 0) return null;
     return vol * price;
+  }
+
+  double? _bestDisplayPrice() {
+    if (_currentPrice != null && _currentPrice! > 0) return _currentPrice;
+    if (_candlesIntraday.isNotEmpty) return _candlesIntraday.last.close;
+    if (_candlesKLine.isNotEmpty) return _candlesKLine.last.close;
+    if (_prevClose != null && _prevClose! > 0) return _prevClose;
+    if (_dayOpen != null && _dayOpen! > 0) return _dayOpen;
+    return null;
+  }
+
+  double? _bestOpen() {
+    if (_dayOpen != null && _dayOpen! > 0) return _dayOpen;
+    if (_candlesIntraday.isNotEmpty) return _candlesIntraday.first.open;
+    if (_candlesKLine.isNotEmpty) return _candlesKLine.last.open;
+    return null;
+  }
+
+  double? _bestHigh() {
+    if (_dayHigh != null && _dayHigh! > 0) return _dayHigh;
+    if (_candlesIntraday.isNotEmpty) {
+      return _candlesIntraday.map((c) => c.high).reduce((a, b) => a > b ? a : b);
+    }
+    if (_candlesKLine.isNotEmpty) return _candlesKLine.last.high;
+    return null;
+  }
+
+  double? _bestLow() {
+    if (_dayLow != null && _dayLow! > 0) return _dayLow;
+    if (_candlesIntraday.isNotEmpty) {
+      return _candlesIntraday.map((c) => c.low).reduce((a, b) => a < b ? a : b);
+    }
+    if (_candlesKLine.isNotEmpty) return _candlesKLine.last.low;
+    return null;
+  }
+
+  int? _bestVolume() {
+    if (_realtimeVolume > 0) return _realtimeVolume;
+    if (_dayVolume != null && _dayVolume! > 0) return _dayVolume;
+    if (_candlesIntraday.isNotEmpty && _candlesIntraday.any((c) => (c.volume ?? 0) > 0)) {
+      return _candlesIntraday.fold<int>(0, (sum, candle) => sum + (candle.volume ?? 0));
+    }
+    if (_candlesKLine.isNotEmpty) {
+      final vol = _candlesKLine.last.volume;
+      if (vol != null && vol > 0) return vol;
+    }
+    return null;
+  }
+
+  double? _bestChangeValue() {
+    final price = _bestDisplayPrice();
+    final prev = _prevClose;
+    if (price == null || prev == null || prev <= 0) return null;
+    return price - prev;
+  }
+
+  double? _bestChangePercent() {
+    if (_changePercent != null) return _changePercent;
+    final change = _bestChangeValue();
+    final prev = _prevClose;
+    if (change == null || prev == null || prev <= 0) return null;
+    return change / prev * 100;
   }
 
   static String _formatVol(int v) {
@@ -708,9 +770,9 @@ class _StockChartPageState extends State<StockChartPage>
 
   @override
   Widget build(BuildContext context) {
-    final changeVal = _currentPrice != null && _prevClose != null && _prevClose! > 0
-        ? _currentPrice! - _prevClose!
-        : null;
+    final displayPrice = _bestDisplayPrice();
+    final changeVal = _bestChangeValue();
+    final changePercent = _bestChangePercent();
     final statusLabel = _statusLabel(context);
     return Scaffold(
       backgroundColor: ChartTheme.background,
@@ -719,7 +781,7 @@ class _StockChartPageState extends State<StockChartPage>
           builder: (context, constraints) {
             final screenH = MediaQuery.sizeOf(context).height;
             final isDesktop = constraints.maxWidth >= 1180;
-            final fixedChartHeight = (screenH * 0.48).clamp(360.0, 560.0);
+            final fixedChartHeight = (screenH * 0.56).clamp(420.0, 640.0);
             final detailPanelHeight = fixedChartHeight;
             final availableHeight = fixedChartHeight - _chartContainerPaddingV - _intradayChartPaddingV - 8;
             final contentHeight = availableHeight.clamp(160.0, double.infinity);
@@ -789,16 +851,20 @@ class _StockChartPageState extends State<StockChartPage>
                                   context,
                                   chartContent: chartContent,
                                   chartHeight: fixedChartHeight,
+                                  displayPrice: displayPrice,
                                   changeVal: changeVal,
+                                  changePercent: changePercent,
                                   statusLabel: statusLabel,
                                 ),
                               ),
                               const SizedBox(width: 14),
                               SizedBox(
-                                width: 392,
+                                width: 420,
                                 height: detailPanelHeight,
                                 child: _buildRightQuotePanel(
+                                  displayPrice: displayPrice,
                                   changeVal: changeVal,
+                                  changePercent: changePercent,
                                 ),
                               ),
                             ],
@@ -970,18 +1036,20 @@ class _StockChartPageState extends State<StockChartPage>
     BuildContext context, {
     required Widget chartContent,
     required double chartHeight,
+    required double? displayPrice,
     required double? changeVal,
+    required double? changePercent,
     required String? statusLabel,
   }) {
     final tone =
         changeVal == null || changeVal >= 0 ? ChartTheme.up : ChartTheme.down;
     final bodyHeight = (chartHeight - 182).clamp(280.0, 520.0);
     final desktopMetrics = [
-      ('Open', _formatRightMetric(_dayOpen)),
-      ('High', _formatRightMetric(_dayHigh)),
-      ('Low', _formatRightMetric(_dayLow)),
+      ('Open', _formatRightMetric(_bestOpen())),
+      ('High', _formatRightMetric(_bestHigh())),
+      ('Low', _formatRightMetric(_bestLow())),
       ('Prev Close', _formatRightMetric(_prevClose)),
-      ('Volume', _formatRightVolume()),
+      ('Volume', _formatCompactVolume(_bestVolume())),
       ('Turnover', _formatRightLarge(_turnoverForPriceSection())),
     ];
     return SizedBox(
@@ -1045,8 +1113,8 @@ class _StockChartPageState extends State<StockChartPage>
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              _currentPrice != null
-                                  ? ChartTheme.formatPrice(_currentPrice!)
+                              displayPrice != null
+                                  ? ChartTheme.formatPrice(displayPrice)
                                   : '—',
                               style: TextStyle(
                                 color: tone,
@@ -1075,7 +1143,7 @@ class _StockChartPageState extends State<StockChartPage>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    _signedPercentMetric(_changePercent),
+                                    _signedPercentMetric(changePercent),
                                     style: TextStyle(
                                       color: tone,
                                       fontSize: 16,
@@ -1157,17 +1225,19 @@ class _StockChartPageState extends State<StockChartPage>
   }
 
   Widget _buildRightQuotePanel({
+    required double? displayPrice,
     required double? changeVal,
+    required double? changePercent,
   }) {
     final tone = changeVal == null || changeVal >= 0 ? ChartTheme.up : ChartTheme.down;
     final metrics = [
       ('Change', _signedMetric(changeVal)),
-      ('Change %', _signedPercentMetric(_changePercent)),
-      ('Open', _formatRightMetric(_dayOpen)),
-      ('High', _formatRightMetric(_dayHigh)),
-      ('Low', _formatRightMetric(_dayLow)),
+      ('Change %', _signedPercentMetric(changePercent)),
+      ('Open', _formatRightMetric(_bestOpen())),
+      ('High', _formatRightMetric(_bestHigh())),
+      ('Low', _formatRightMetric(_bestLow())),
       ('Prev Close', _formatRightMetric(_prevClose)),
-      ('Volume', _formatRightVolume()),
+      ('Volume', _formatCompactVolume(_bestVolume())),
       ('Turnover', _formatRightLarge(_turnoverForPriceSection())),
     ];
     return Container(
@@ -1208,8 +1278,8 @@ class _StockChartPageState extends State<StockChartPage>
               children: [
                 Expanded(
                   child: Text(
-                    _currentPrice != null
-                        ? ChartTheme.formatPrice(_currentPrice!)
+                    displayPrice != null
+                        ? ChartTheme.formatPrice(displayPrice)
                         : '—',
                     style: TextStyle(
                       color: tone,
@@ -1222,7 +1292,7 @@ class _StockChartPageState extends State<StockChartPage>
                   ),
                 ),
                 Text(
-                  '${_signedMetric(changeVal)}  ${_signedPercentMetric(_changePercent)}',
+                  '${_signedMetric(changeVal)}  ${_signedPercentMetric(changePercent)}',
                   textAlign: TextAlign.right,
                   style: TextStyle(
                     color: tone,
@@ -1443,12 +1513,16 @@ class _StockChartPageState extends State<StockChartPage>
   String _formatRightMetric(double? value) =>
       value != null && value > 0 ? ChartTheme.formatPrice(value) : '—';
 
-  String _formatRightVolume() {
-    final vol = _dayVolume;
+  String _formatCompactVolume(int? vol) {
     if (vol == null || vol <= 0) return '—';
+    if (vol >= 1000000000) return '${(vol / 1000000000).toStringAsFixed(2)}B';
     if (vol >= 1000000) return '${(vol / 1000000).toStringAsFixed(2)}M';
     if (vol >= 1000) return '${(vol / 1000).toStringAsFixed(2)}K';
     return '$vol';
+  }
+
+  String _formatRightVolume() {
+    return _formatCompactVolume(_bestVolume());
   }
 
 

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import 'chart_theme.dart';
@@ -33,7 +33,7 @@ class OrderBookSection extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: ChartTheme.cardBackground,
         borderRadius: BorderRadius.circular(16),
@@ -78,13 +78,13 @@ class OrderBookSection extends StatelessWidget {
           if (rows.isEmpty)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: ChartTheme.surface2,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const Text(
-                '当前数据源只提供实时买一卖一，暂未提供更深盘口。',
+                'Current feed only provides top-level realtime bid and ask.',
                 style: TextStyle(
                   color: ChartTheme.textSecondary,
                   fontSize: 13,
@@ -108,7 +108,8 @@ class OrderBookSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: ChartTheme.surface2,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: ChartTheme.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,7 +178,7 @@ class OrderBookSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: ChartTheme.surface2.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
