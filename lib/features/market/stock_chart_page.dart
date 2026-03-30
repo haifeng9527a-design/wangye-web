@@ -720,7 +720,7 @@ class _StockChartPageState extends State<StockChartPage>
             final screenH = MediaQuery.sizeOf(context).height;
             final isDesktop = constraints.maxWidth >= 1180;
             final fixedChartHeight = (screenH * 0.48).clamp(360.0, 560.0);
-            final detailPanelHeight = (screenH * 0.58).clamp(380.0, 680.0);
+            final detailPanelHeight = fixedChartHeight;
             final availableHeight = fixedChartHeight - _chartContainerPaddingV - _intradayChartPaddingV - 8;
             final contentHeight = availableHeight.clamp(160.0, double.infinity);
             final contentHeightIntraday = contentHeight.clamp(180.0, double.infinity);
@@ -789,16 +789,16 @@ class _StockChartPageState extends State<StockChartPage>
                                   context,
                                   chartContent: chartContent,
                                   chartHeight: fixedChartHeight,
+                                  changeVal: changeVal,
                                   statusLabel: statusLabel,
                                 ),
                               ),
                               const SizedBox(width: 14),
                               SizedBox(
-                                width: 336,
+                                width: 392,
                                 height: detailPanelHeight,
                                 child: _buildRightQuotePanel(
                                   changeVal: changeVal,
-                                  compact: false,
                                 ),
                               ),
                             ],
@@ -969,104 +969,202 @@ class _StockChartPageState extends State<StockChartPage>
     BuildContext context, {
     required Widget chartContent,
     required double chartHeight,
+    required double? changeVal,
     required String? statusLabel,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: ChartTheme.cardBackground,
-        borderRadius: BorderRadius.circular(ChartTheme.radiusCard),
-        border: Border.all(color: ChartTheme.border),
-        boxShadow: ChartTheme.cardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-            child: Row(
-              children: [
-                _infoChip(statusLabel ?? 'Market', tone: ChartTheme.up),
-                const SizedBox(width: 8),
-                _infoChip('US', tone: ChartTheme.accentGold),
-                if (widget.isMockData) ...[
-                  const SizedBox(width: 8),
-                  _infoChip('Mock', tone: ChartTheme.down),
-                ],
-                const Spacer(),
-                Text(
-                  widget.name ?? _stockName ?? _effectiveSymbol,
-                  style: const TextStyle(
-                    color: ChartTheme.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+    final tone =
+        changeVal == null || changeVal >= 0 ? ChartTheme.up : ChartTheme.down;
+    final bodyHeight = (chartHeight - 182).clamp(280.0, 520.0);
+    final desktopMetrics = [
+      ('Open', _formatRightMetric(_dayOpen)),
+      ('High', _formatRightMetric(_dayHigh)),
+      ('Low', _formatRightMetric(_dayLow)),
+      ('Prev Close', _formatRightMetric(_prevClose)),
+      ('Volume', _formatRightVolume()),
+      ('Turnover', _formatRightLarge(_turnoverForPriceSection())),
+    ];
+    return SizedBox(
+      height: chartHeight,
+      child: Container(
+        decoration: BoxDecoration(
+          color: ChartTheme.cardBackground,
+          borderRadius: BorderRadius.circular(ChartTheme.radiusCard),
+          border: Border.all(color: ChartTheme.border),
+          boxShadow: ChartTheme.cardShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              _effectiveSymbol,
+                              style: const TextStyle(
+                                color: ChartTheme.textPrimary,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.3,
+                                fontFamily: ChartTheme.fontMono,
+                                fontFeatures: [ChartTheme.tabularFigures],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            _infoChip(statusLabel ?? 'US Market', tone: tone),
+                            const SizedBox(width: 8),
+                            _infoChip('US', tone: ChartTheme.accentGold),
+                            if (widget.isMockData) ...[
+                              const SizedBox(width: 8),
+                              _infoChip('Mock', tone: ChartTheme.down),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.name ?? _stockName ?? _effectiveSymbol,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: ChartTheme.textSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              _currentPrice != null
+                                  ? ChartTheme.formatPrice(_currentPrice!)
+                                  : '—',
+                              style: TextStyle(
+                                color: tone,
+                                fontSize: 54,
+                                height: 0.95,
+                                fontWeight: FontWeight.w800,
+                                fontFamily: ChartTheme.fontMono,
+                                fontFeatures: const [ChartTheme.tabularFigures],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _signedMetric(changeVal),
+                                    style: TextStyle(
+                                      color: tone,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      fontFamily: ChartTheme.fontMono,
+                                      fontFeatures: const [ChartTheme.tabularFigures],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _signedPercentMetric(_changePercent),
+                                    style: TextStyle(
+                                      color: tone,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      fontFamily: ChartTheme.fontMono,
+                                      fontFeatures: const [ChartTheme.tabularFigures],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-            child: _buildStatsBar(),
-          ),
-          ChartModeTabs(
-            tabIndex: _tabController.index,
-            onTabChanged: (i) => _tabController.animateTo(i),
-            isIntraday: _tabController.index == 0,
-            intradayPeriod: _intradayInterval,
-            klineTimespan: _klineInterval == '1day'
-                ? 'day'
-                : _klineInterval == '1week'
-                    ? 'week'
-                    : _klineInterval == '1month'
-                        ? 'month'
-                        : _klineInterval == '1year'
-                            ? 'year'
-                            : _klineInterval,
-            onIntradayPeriodChanged: (_) {},
-            onKlineTimespanChanged: (_) {},
-            extendedKlineInterval: _extendedKlineInterval,
-            onExtendedKlineChanged: (v) {
-              if (_extendedKlineInterval != v) {
-                setState(() {
-                  _extendedKlineInterval = v;
-                  _klineInterval = v;
-                  _chartLoading = true;
-                });
-                _loadKLine().then((_) {
-                  if (mounted) setState(() => _chartLoading = false);
-                });
-              }
-            },
-          ),
-          const SizedBox(height: 6),
-          TvChartContainer(
-            edgeToEdge: true,
-            padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
-            child: SizedBox(
-              height: chartHeight,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(18),
-                ),
-                child: chartContent,
+                  const SizedBox(width: 24),
+                  Expanded(
+                    flex: 4,
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < desktopMetrics.length; i += 2)
+                          Padding(
+                            padding: EdgeInsets.only(
+                              bottom: i == desktopMetrics.length - 2 ? 0 : 10,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _desktopMetricTableCell(
+                                    desktopMetrics[i].$1,
+                                    desktopMetrics[i].$2,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _desktopMetricTableCell(
+                                    desktopMetrics[i + 1].$1,
+                                    desktopMetrics[i + 1].$2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            Container(
+              height: 1,
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              color: ChartTheme.borderSubtle,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+              child: _buildDesktopToolbar(),
+            ),
+            Expanded(
+              child: TvChartContainer(
+                edgeToEdge: true,
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
+                child: SizedBox(
+                  height: bodyHeight,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(18),
+                    ),
+                    child: chartContent,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildRightQuotePanel({
     required double? changeVal,
-    required bool compact,
   }) {
-    final tone =
-        changeVal == null || changeVal >= 0 ? ChartTheme.up : ChartTheme.down;
+    final tone = changeVal == null || changeVal >= 0 ? ChartTheme.up : ChartTheme.down;
     final metrics = [
+      ('Change', _signedMetric(changeVal)),
+      ('Change %', _signedPercentMetric(_changePercent)),
+      ('Open', _formatRightMetric(_dayOpen)),
       ('High', _formatRightMetric(_dayHigh)),
       ('Low', _formatRightMetric(_dayLow)),
-      ('Open', _formatRightMetric(_dayOpen)),
       ('Prev Close', _formatRightMetric(_prevClose)),
       ('Volume', _formatRightVolume()),
       ('Turnover', _formatRightLarge(_turnoverForPriceSection())),
@@ -1079,68 +1177,88 @@ class _StockChartPageState extends State<StockChartPage>
         boxShadow: ChartTheme.cardShadow,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              _effectiveSymbol,
-              style: const TextStyle(
-                color: ChartTheme.textPrimary,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                fontFamily: ChartTheme.fontMono,
-                fontFeatures: [ChartTheme.tabularFigures],
-              ),
-            ),
-            if ((widget.name ?? _stockName) != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                widget.name ?? _stockName ?? '',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: ChartTheme.textSecondary,
-                  fontSize: 12,
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _effectiveSymbol,
+                        style: const TextStyle(
+                          color: ChartTheme.textPrimary,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          fontFamily: ChartTheme.fontMono,
+                          fontFeatures: [ChartTheme.tabularFigures],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.name ?? _stockName ?? '',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: ChartTheme.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            Text(
-              _currentPrice != null
-                  ? ChartTheme.formatPrice(_currentPrice!)
-                  : '—',
-              style: TextStyle(
-                color: tone,
-                fontSize: compact ? 34 : 42,
-                fontWeight: FontWeight.w800,
-                height: 1,
-                fontFamily: ChartTheme.fontMono,
-                fontFeatures: const [ChartTheme.tabularFigures],
-              ),
-            ),
-            Text(
-              '${_signedMetric(changeVal)}   ${_signedPercentMetric(_changePercent)}',
-              style: TextStyle(
-                color: tone,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                fontFamily: ChartTheme.fontMono,
-                fontFeatures: const [ChartTheme.tabularFigures],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: metrics
-                  .map(
-                    (metric) => SizedBox(
-                      width: compact ? 140 : 148,
-                      child: _rightMetricCard(metric.$1, metric.$2),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: tone.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: tone.withValues(alpha: 0.24)),
+                  ),
+                  child: Text(
+                    _signedPercentMetric(_changePercent),
+                    style: TextStyle(
+                      color: tone,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: ChartTheme.fontMono,
+                      fontFeatures: const [ChartTheme.tabularFigures],
                     ),
-                  )
-                  .toList(),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              decoration: BoxDecoration(
+                color: ChartTheme.surface2,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: ChartTheme.borderSubtle),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Snapshot',
+                    style: TextStyle(
+                      color: ChartTheme.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  for (var i = 0; i < metrics.length; i++)
+                    _sidebarMetricRow(
+                      metrics[i].$1,
+                      metrics[i].$2,
+                      emphasize: i < 2,
+                    ),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
             Expanded(
@@ -1163,15 +1281,16 @@ class _StockChartPageState extends State<StockChartPage>
     );
   }
 
-  Widget _rightMetricCard(String label, String value) {
+  Widget _desktopMetricTableCell(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         color: ChartTheme.surface2,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ChartTheme.borderSubtle),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
@@ -1181,18 +1300,139 @@ class _StockChartPageState extends State<StockChartPage>
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              color: ChartTheme.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: ChartTheme.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                fontFamily: ChartTheme.fontMono,
+                fontFeatures: [ChartTheme.tabularFigures],
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _sidebarMetricRow(String label, String value, {bool emphasize = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: ChartTheme.textTertiary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: emphasize ? ChartTheme.textPrimary : ChartTheme.textSecondary,
+              fontSize: emphasize ? 15 : 13,
+              fontWeight: FontWeight.w700,
+              fontFamily: ChartTheme.fontMono,
+              fontFeatures: const [ChartTheme.tabularFigures],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopToolbar() {
+    final labels = ['1分', '5分', '15分', '30分', '日K', _extendedKlineLabel()];
+    return Row(
+      children: [
+        for (var i = 0; i < labels.length; i++) ...[
+          _desktopTabButton(
+            labels[i],
+            selected: _tabController.index == i,
+            onTap: () => _tabController.animateTo(i),
+          ),
+          if (i != labels.length - 1) const SizedBox(width: 8),
+        ],
+        const Spacer(),
+        _desktopToolChip(
+          _overlayIndicator == 'none' ? '主图: 关闭' : '主图: ${_overlayIndicator.toUpperCase()}',
+        ),
+        const SizedBox(width: 8),
+        _desktopToolChip(
+          _subChartIndicator == 'vol' ? '副图: VOL' : '副图: ${_subChartIndicator.toUpperCase()}',
+        ),
+        const SizedBox(width: 8),
+        _desktopToolChip(_showPrevCloseLine ? '昨收线' : '隐藏昨收'),
+      ],
+    );
+  }
+
+  Widget _desktopTabButton(
+    String label, {
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? ChartTheme.surface2 : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? ChartTheme.accentGold : ChartTheme.borderSubtle,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? ChartTheme.textPrimary : ChartTheme.textSecondary,
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _desktopToolChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: ChartTheme.surface2,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: ChartTheme.borderSubtle),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: ChartTheme.textSecondary,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  String _extendedKlineLabel() {
+    switch (_extendedKlineInterval) {
+      case '1month':
+        return '月K';
+      case '1year':
+        return '年K';
+      default:
+        return '周K';
+    }
   }
 
   String _formatRightMetric(double? value) =>
