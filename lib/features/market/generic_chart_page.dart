@@ -1165,7 +1165,7 @@ class _GenericChartPageState extends State<GenericChartPage>
                             Text(
                               currentPrice != null
                                   ? ChartTheme.formatPrice(currentPrice)
-                                  : '鈥?,
+                                  : '--',
                               style: TextStyle(
                                 color: tone,
                                 fontSize: 46,
@@ -1319,12 +1319,12 @@ class _GenericChartPageState extends State<GenericChartPage>
   }
 
   String _formatMetric(double? value) {
-    if (value == null || value <= 0) return '鈥?;
+    if (value == null || value <= 0) return '--';
     return ChartTheme.formatPrice(value);
   }
 
   String _formatVolumeCompact(int? value) {
-    if (value == null || value <= 0) return '鈥?;
+    if (value == null || value <= 0) return '--';
     if (value >= 100000000) return '${(value / 100000000).toStringAsFixed(2)}B';
     if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(2)}M';
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
@@ -1332,7 +1332,7 @@ class _GenericChartPageState extends State<GenericChartPage>
   }
 
   String _formatLargeNumber(double? value) {
-    if (value == null || value <= 0) return '鈥?;
+    if (value == null || value <= 0) return '--';
     if (value >= 1000000000) return '${(value / 1000000000).toStringAsFixed(2)}B';
     if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(2)}M';
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
@@ -1340,12 +1340,12 @@ class _GenericChartPageState extends State<GenericChartPage>
   }
 
   String _signedMetric(double? value) {
-    if (value == null) return '鈥?;
+    if (value == null) return '--';
     return '${value >= 0 ? '+' : ''}${ChartTheme.formatPrice(value)}';
   }
 
   String _signedPercentMetric(double? value) {
-    if (value == null) return '鈥?;
+    if (value == null) return '--';
     return '${value >= 0 ? '+' : ''}${value.toStringAsFixed(2)}%';
   }
 
@@ -1420,7 +1420,7 @@ class _GenericChartPageState extends State<GenericChartPage>
           ),
           const SizedBox(height: 10),
           Text(
-            currentPrice != null ? ChartTheme.formatPrice(currentPrice) : '鈥?,
+            currentPrice != null ? ChartTheme.formatPrice(currentPrice) : '--',
             style: TextStyle(
               color: priceColor,
               fontSize: 38,
@@ -1431,7 +1431,7 @@ class _GenericChartPageState extends State<GenericChartPage>
           ),
           const SizedBox(height: 6),
           Text(
-            '${change != null ? (change >= 0 ? '+' : '') + ChartTheme.formatPrice(change) : '鈥?}   ${changePercent != null ? '${changePercent >= 0 ? '+' : ''}${changePercent.toStringAsFixed(2)}%' : '鈥?}',
+            '${change != null ? (change >= 0 ? '+' : '') + ChartTheme.formatPrice(change) : '--'}   ${changePercent != null ? '${changePercent >= 0 ? '+' : ''}${changePercent.toStringAsFixed(2)}%' : '--'}',
             style: TextStyle(
               color: priceColor,
               fontSize: 15,
@@ -1475,15 +1475,15 @@ class _GenericChartPageState extends State<GenericChartPage>
             children: [
               Expanded(
                 child: _sidebarMetric(
-                  '浠婂紑',
-                  q?.open != null ? ChartTheme.formatPrice(q!.open!) : '鈥?,
+                  '今开',
+                  q?.open != null ? ChartTheme.formatPrice(q!.open!) : '--',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _sidebarMetric(
-                  '鏄ㄦ敹',
-                  prevClose != null ? ChartTheme.formatPrice(prevClose) : '鈥?,
+                  '昨收',
+                  prevClose != null ? ChartTheme.formatPrice(prevClose) : '--',
                 ),
               ),
             ],
@@ -1493,16 +1493,16 @@ class _GenericChartPageState extends State<GenericChartPage>
             children: [
               Expanded(
                 child: _sidebarMetric(
-                  '鏈€楂?,
-                  q?.high != null ? ChartTheme.formatPrice(q!.high!) : '鈥?,
+                  '最高',
+                  q?.high != null ? ChartTheme.formatPrice(q!.high!) : '--',
                   valueColor: ChartTheme.up,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _sidebarMetric(
-                  '鏈€浣?,
-                  q?.low != null ? ChartTheme.formatPrice(q!.low!) : '鈥?,
+                  '最低',
+                  q?.low != null ? ChartTheme.formatPrice(q!.low!) : '--',
                   valueColor: ChartTheme.down,
                 ),
               ),
@@ -1566,21 +1566,21 @@ class _GenericChartPageState extends State<GenericChartPage>
     final symbol = _effectiveSymbol.trim().toUpperCase();
     if (symbol.contains('/')) {
       if (symbol.endsWith('/USD') || symbol.endsWith('/USDT')) {
-        return '鍔犲瘑璐у竵';
+        return '加密货币';
       }
-      return '澶栨眹';
+      return '外汇';
     }
-    return '鎸囨暟';
+    return '指数';
   }
 
   String _liveBadgeText() {
     final last = _lastQuoteUpdatedAt;
-    if (last == null) return '绛夊緟瀹炴椂鏁版嵁';
+    if (last == null) return '等待实时数据';
     final seconds = DateTime.now().difference(last).inSeconds;
-    if (seconds <= 1) return '瀹炴椂鏇存柊涓?;
-    if (seconds < 60) return '$seconds 绉掑墠鏇存柊';
+    if (seconds <= 1) return '实时更新中';
+    if (seconds < 60) return '$seconds 秒前更新';
     final minutes = DateTime.now().difference(last).inMinutes;
-    return '$minutes 鍒嗛挓鍓嶆洿鏂?;
+    return '$minutes 分钟前更新';
   }
 
   Widget _buildOverviewCard({
@@ -1842,14 +1842,14 @@ class _GenericChartPageState extends State<GenericChartPage>
         ? (price - prevVal) / prevVal * 100
         : (q?.changePercent ?? 0.0);
     final changeColor = (change >= 0 ? ChartTheme.up : ChartTheme.down);
-    String turnStr = '鈥?;
+    String turnStr = '--';
     if (turnover >= 10000)
-      turnStr = '${(turnover / 10000).toStringAsFixed(2)}涓?;
+      turnStr = '${(turnover / 10000).toStringAsFixed(2)}万';
     else if (turnover > 0) turnStr = turnover.toStringAsFixed(0);
-    String volStr = '鈥?;
+    String volStr = '--';
     if (totalVol > 0)
       volStr = totalVol >= 10000
-          ? '${(totalVol / 10000).toStringAsFixed(2)}涓?
+          ? '${(totalVol / 10000).toStringAsFixed(2)}万'
           : totalVol.toString();
 
     return Container(
@@ -1865,9 +1865,9 @@ class _GenericChartPageState extends State<GenericChartPage>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _summaryBlock(AppLocalizations.of(context)!.chartPrice,
-                price > 0 ? price.toStringAsFixed(2) : '鈥?, null),
+                price > 0 ? price.toStringAsFixed(2) : '--', null),
             _summaryBlock(AppLocalizations.of(context)!.chartAvg,
-                avgPrice != null ? avgPrice.toStringAsFixed(2) : '鈥?, null),
+                avgPrice != null ? avgPrice.toStringAsFixed(2) : '--', null),
             _summaryBlock(
                 AppLocalizations.of(context)!.chartChangeShort,
                 '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}',
@@ -2062,10 +2062,10 @@ class _GenericChartPageState extends State<GenericChartPage>
   String _formatCompactVolume(int? volume) {
     if (volume == null || volume <= 0) return '--';
     if (volume >= 100000000) {
-      return '${(volume / 100000000).toStringAsFixed(2)}浜?;
+      return '${(volume / 100000000).toStringAsFixed(2)}亿';
     }
     if (volume >= 10000) {
-      return '${(volume / 10000).toStringAsFixed(2)}涓?;
+      return '${(volume / 10000).toStringAsFixed(2)}万';
     }
     return volume.toString();
   }
@@ -2073,10 +2073,10 @@ class _GenericChartPageState extends State<GenericChartPage>
   String _formatCompactTurnover(double? turnover) {
     if (turnover == null || turnover <= 0) return '--';
     if (turnover >= 100000000) {
-      return '${(turnover / 100000000).toStringAsFixed(2)}浜?;
+      return '${(turnover / 100000000).toStringAsFixed(2)}亿';
     }
     if (turnover >= 10000) {
-      return '${(turnover / 10000).toStringAsFixed(2)}涓?;
+      return '${(turnover / 10000).toStringAsFixed(2)}万';
     }
     return turnover.toStringAsFixed(0);
   }

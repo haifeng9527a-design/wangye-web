@@ -199,7 +199,7 @@ class OrderBookSection extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            price != null ? ChartTheme.formatPrice(price) : '—',
+            price != null ? ChartTheme.formatPrice(price) : '--',
             style: TextStyle(
               color: color,
               fontSize: 16,
@@ -268,7 +268,7 @@ class OrderBookSection extends StatelessWidget {
 
   Widget _priceCell(double? value, Color color) {
     return Text(
-      value != null ? ChartTheme.formatPrice(value) : '—',
+      value != null ? ChartTheme.formatPrice(value) : '--',
       textAlign: TextAlign.center,
       style: TextStyle(
         color: value != null ? color : ChartTheme.textSecondary,
@@ -282,7 +282,7 @@ class OrderBookSection extends StatelessWidget {
 
   Widget _qtyCell(int? value) {
     return Text(
-      value?.toString() ?? '—',
+      value?.toString() ?? '--',
       textAlign: TextAlign.center,
       style: const TextStyle(
         color: ChartTheme.textPrimary,
