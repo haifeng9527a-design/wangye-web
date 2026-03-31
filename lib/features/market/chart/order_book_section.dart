@@ -4,6 +4,8 @@ import '../../../l10n/app_localizations.dart';
 import '../market_repository.dart';
 import 'chart_theme.dart';
 
+typedef _DepthRow = ({double? askPrice, int? askQty, double? bidPrice, int? bidQty});
+
 class OrderBookSection extends StatelessWidget {
   const OrderBookSection({
     super.key,
@@ -22,24 +24,33 @@ class OrderBookSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topAsk = asks.isNotEmpty
-        ? asks.first
-        : (quote?.ask != null ? (quote!.ask!, quote?.askSize ?? 0) : null);
-    final topBid = bids.isNotEmpty
-        ? bids.first
-        : (quote?.bid != null ? (quote!.bid!, quote?.bidSize ?? 0) : null);
-    final spread =
-        topAsk != null && topBid != null ? topAsk.$1 - topBid.$1 : null;
-    final rows = <({double? askPrice, int? askQty, double? bidPrice, int? bidQty})>[];
+    final realRows = <_DepthRow>[];
     final maxDepth = [asks.length, bids.length].fold<int>(0, (a, b) => a > b ? a : b);
     for (var i = 0; i < maxDepth && i < 5; i++) {
-      rows.add((
+      realRows.add((
         askPrice: i < asks.length ? asks[i].$1 : null,
         askQty: i < asks.length ? asks[i].$2 : null,
         bidPrice: i < bids.length ? bids[i].$1 : null,
         bidQty: i < bids.length ? bids[i].$2 : null,
       ));
     }
+
+    final simulatedRows = realRows.isEmpty ? _buildSimulatedRows() : const <_DepthRow>[];
+    final displayRows = realRows.isNotEmpty ? realRows : simulatedRows;
+    final hasSimulatedDepth = realRows.isEmpty && simulatedRows.isNotEmpty;
+
+    final topAsk = asks.isNotEmpty
+        ? asks.first
+        : (displayRows.isNotEmpty && displayRows.first.askPrice != null
+            ? (displayRows.first.askPrice!, displayRows.first.askQty ?? 0)
+            : (quote?.ask != null ? (quote!.ask!, quote?.askSize ?? 0) : null));
+    final topBid = bids.isNotEmpty
+        ? bids.first
+        : (displayRows.isNotEmpty && displayRows.first.bidPrice != null
+            ? (displayRows.first.bidPrice!, displayRows.first.bidQty ?? 0)
+            : (quote?.bid != null ? (quote!.bid!, quote?.bidSize ?? 0) : null));
+    final spread =
+        topAsk != null && topBid != null ? topAsk.$1 - topBid.$1 : null;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -59,6 +70,7 @@ class OrderBookSection extends StatelessWidget {
                   price: topAsk?.$1,
                   qty: topAsk?.$2,
                   color: ChartTheme.down,
+                  synthetic: hasSimulatedDepth,
                 ),
               ),
               const SizedBox(width: 10),
@@ -68,6 +80,7 @@ class OrderBookSection extends StatelessWidget {
                   price: topBid?.$1,
                   qty: topBid?.$2,
                   color: ChartTheme.up,
+                  synthetic: hasSimulatedDepth,
                 ),
               ),
               const SizedBox(width: 10),
@@ -77,6 +90,7 @@ class OrderBookSection extends StatelessWidget {
                   price: spread,
                   qty: null,
                   color: ChartTheme.textPrimary,
+                  synthetic: hasSimulatedDepth,
                 ),
               ),
             ],
@@ -84,16 +98,83 @@ class OrderBookSection extends StatelessWidget {
           const SizedBox(height: 14),
           _headerRow(context),
           const SizedBox(height: 8),
-          if (rows.isEmpty)
+          if (hasSimulatedDepth) ...[
+            _simulatedBanner(),
+            const SizedBox(height: 8),
+          ],
+          if (displayRows.isEmpty)
             _fallbackSnapshotCard()
           else
-            ...rows.map(_depthRow),
+            ...displayRows.map(_depthRow),
+          if (hasSimulatedDepth) ...[
+            const SizedBox(height: 12),
+            _fallbackSnapshotCard(compact: true),
+          ],
         ],
       ),
     );
   }
 
-  Widget _fallbackSnapshotCard() {
+  List<_DepthRow> _buildSimulatedRows() {
+    final base = currentPrice ?? quote?.price ?? quote?.prevClose;
+    if (base == null || base <= 0) return const <_DepthRow>[];
+
+    final spreadStep = (base * 0.00012) > 0.2 ? (base * 0.00012) : 0.2;
+    final ladderStep = (base * 0.00045) > 0.4 ? (base * 0.00045) : 0.4;
+    final seed = ((base * 100).round().abs() % 17) + 7;
+    final bias = (quote?.changePercent ?? 0) >= 0 ? 1 : -1;
+    final rows = <_DepthRow>[];
+
+    for (var i = 0; i < 5; i++) {
+      final askPrice = _roundDepthPrice(base + spreadStep + ladderStep * i);
+      final bidPrice = _roundDepthPrice(base - spreadStep - ladderStep * i);
+      final askQty = (seed + i * 3 + (bias > 0 ? 1 : 4)) * 9;
+      final bidQty = (seed + (4 - i) * 3 + (bias > 0 ? 4 : 1)) * 9;
+      rows.add((
+        askPrice: askPrice,
+        askQty: askQty,
+        bidPrice: bidPrice > 0 ? bidPrice : 0.0,
+        bidQty: bidQty,
+      ));
+    }
+
+    return rows;
+  }
+
+  double _roundDepthPrice(double value) {
+    final decimals = value >= 1000 ? 2 : value >= 1 ? 4 : 6;
+    return double.parse(value.toStringAsFixed(decimals));
+  }
+
+  Widget _simulatedBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: ChartTheme.surface2,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: ChartTheme.borderSubtle),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.auto_graph_rounded, size: 16, color: ChartTheme.accentGold),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '当前无真实盘口，已根据实时价格生成模拟买卖盘并随价格变化刷新。',
+              style: TextStyle(
+                color: ChartTheme.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fallbackSnapshotCard({bool compact = false}) {
     final q = quote;
     final prevClose = q?.prevClose ??
         ((q != null && q.change != 0) ? (q.price - q.change) : null);
@@ -113,7 +194,7 @@ class OrderBookSection extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(compact ? 12 : 14),
       decoration: BoxDecoration(
         color: ChartTheme.surface2,
         borderRadius: BorderRadius.circular(10),
@@ -121,9 +202,9 @@ class OrderBookSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '当前数据源暂无盘口深度，已回退显示可获取的实时快照。',
-            style: TextStyle(
+          Text(
+            compact ? '同步展示当前可获取的实时快照。' : '当前数据源暂无盘口深度，已回退显示可获取的实时快照。',
+            style: const TextStyle(
               color: ChartTheme.textSecondary,
               fontSize: 13,
             ),
@@ -134,7 +215,7 @@ class OrderBookSection extends StatelessWidget {
             runSpacing: 10,
             children: items.map((item) {
               return SizedBox(
-                width: 148,
+                width: compact ? 132 : 148,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
@@ -178,6 +259,7 @@ class OrderBookSection extends StatelessWidget {
     required double? price,
     required int? qty,
     required Color color,
+    required bool synthetic,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -210,7 +292,9 @@ class OrderBookSection extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            qty != null ? 'Qty $qty' : 'Realtime top level',
+            qty != null
+                ? 'Qty $qty'
+                : (synthetic ? 'Simulated stream' : 'Realtime top level'),
             style: const TextStyle(
               color: ChartTheme.textSecondary,
               fontSize: 11,
@@ -245,9 +329,7 @@ class OrderBookSection extends StatelessWidget {
     );
   }
 
-  Widget _depthRow(
-    ({double? askPrice, int? askQty, double? bidPrice, int? bidQty}) row,
-  ) {
+  Widget _depthRow(_DepthRow row) {
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.symmetric(vertical: 10),

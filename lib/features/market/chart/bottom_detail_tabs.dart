@@ -155,9 +155,7 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
                   children: List.generate(labels.length, (index) {
                     final selected = _index == index;
                     return Padding(
-                      padding: EdgeInsets.only(
-                        right: index == labels.length - 1 ? 0 : 8,
-                      ),
+                      padding: EdgeInsets.only(right: index == labels.length - 1 ? 0 : 8),
                       child: InkWell(
                         onTap: () {
                           setState(() => _index = index);
@@ -263,6 +261,7 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
             emptyText: widget.symbol?.trim().isNotEmpty == true
                 ? '${widget.symbol} 暂无新闻'
                 : '暂无新闻',
+            fallback: _buildNewsFallback(),
           ),
         );
       case 4:
@@ -274,6 +273,7 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
             emptyText: widget.symbol?.trim().isNotEmpty == true
                 ? '${widget.symbol} 暂无公告'
                 : '暂无公告',
+            fallback: _buildAnnouncementFallback(),
           ),
         );
       default:
@@ -351,10 +351,7 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
           children: chips
               .map(
                 (chip) => Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: ChartTheme.surface2,
                     borderRadius: BorderRadius.circular(12),
@@ -371,28 +368,6 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
               )
               .toList(),
         ),
-        if (_dividends.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          _sectionTitle('Dividends'),
-          const SizedBox(height: 8),
-          ..._dividends.take(3).map(
-                (item) => _listRow(
-                  '${item['ex_dividend_date'] ?? '-'}',
-                  '\$${item['cash_amount'] ?? '-'}',
-                ),
-              ),
-        ],
-        if (_splits.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          _sectionTitle('Splits'),
-          const SizedBox(height: 8),
-          ..._splits.take(3).map(
-                (item) => _listRow(
-                  '${item['execution_date'] ?? '-'}',
-                  '${item['split_from'] ?? '-'}:${item['split_to'] ?? '-'}',
-                ),
-              ),
-        ],
       ],
     );
   }
@@ -401,6 +376,7 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
     required bool loading,
     required List<MarketNewsItem> items,
     required String emptyText,
+    Widget? fallback,
   }) {
     if (loading) {
       return const Padding(
@@ -409,7 +385,7 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
       );
     }
     if (items.isEmpty) {
-      return _emptyPanel(emptyText);
+      return fallback ?? _emptyPanel(emptyText);
     }
     return Column(
       children: items.take(12).map((item) {
@@ -420,10 +396,7 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
             borderRadius: BorderRadius.circular(14),
           ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 4,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             title: Text(
               item.title,
               maxLines: 2,
@@ -456,45 +429,148 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
     );
   }
 
-  Widget _sectionTitle(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: ChartTheme.textPrimary,
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
+  Widget _buildNewsFallback() {
+    final q = widget.quote;
+    final price = q?.price ?? widget.currentPrice ?? 0;
+    final turnover = (q != null && q.volume != null && q.volume! > 0 && price > 0)
+        ? q.volume! * price
+        : null;
+    final rangePercent = (q?.high != null && q?.low != null && q!.low! > 0)
+        ? ((q.high! - q.low!) / q.low!) * 100
+        : null;
+
+    return _fallbackPanel(
+      title: '实时摘要',
+      subtitle: '新闻流为空时，自动切换为实时行情摘要。',
+      children: [
+        _fallbackMetricCard('涨跌幅', _signedPercent(q?.changePercent),
+            accent: (q?.changePercent ?? 0) >= 0 ? ChartTheme.up : ChartTheme.down),
+        _fallbackMetricCard('涨跌额', _signedPrice(q?.change),
+            accent: (q?.change ?? 0) >= 0 ? ChartTheme.up : ChartTheme.down),
+        _fallbackMetricCard('日内区间', '${_formatPrice(q?.high)} - ${_formatPrice(q?.low)}'),
+        _fallbackMetricCard(
+            '波动幅度', rangePercent == null ? '--' : '${rangePercent.toStringAsFixed(2)}%'),
+        _fallbackMetricCard('成交量', _formatCompactVolume(q?.volume)),
+        _fallbackMetricCard('成交额', _formatCompactTurnover(turnover)),
+      ],
+    );
+  }
+
+  Widget _buildAnnouncementFallback() {
+    final candles = widget.klineCandles;
+    final recent = candles.length > 24 ? candles.sublist(candles.length - 24) : candles;
+    final last = recent.isNotEmpty ? recent.last : null;
+    final support = recent.isNotEmpty
+        ? recent.map((c) => c.low).reduce((a, b) => a < b ? a : b)
+        : null;
+    final resistance = recent.isNotEmpty
+        ? recent.map((c) => c.high).reduce((a, b) => a > b ? a : b)
+        : null;
+    final distanceToResistance =
+        (last != null && resistance != null && resistance > 0)
+            ? ((resistance - last.close) / resistance) * 100
+            : null;
+
+    return _fallbackPanel(
+      title: '结构洞察',
+      subtitle: '公告流为空时，自动切换为价格结构和区间参考。',
+      children: [
+        _fallbackMetricCard(
+          '趋势状态',
+          last == null ? '--' : (last.close >= last.open ? '偏强震荡' : '偏弱回落'),
+          accent: last != null && last.close >= last.open ? ChartTheme.up : ChartTheme.down,
+        ),
+        _fallbackMetricCard('支撑位', _formatPrice(support)),
+        _fallbackMetricCard('压力位', _formatPrice(resistance)),
+        _fallbackMetricCard(
+          '距压力位',
+          distanceToResistance == null ? '--' : '${distanceToResistance.toStringAsFixed(2)}%',
+        ),
+        _fallbackMetricCard('最近收盘', _formatPrice(last?.close)),
+        _fallbackMetricCard(
+          '最近振幅',
+          last == null
+              ? '--'
+              : '${(((last.high - last.low) / (last.low == 0 ? 1 : last.low)) * 100).toStringAsFixed(2)}%',
+        ),
+      ],
+    );
+  }
+
+  Widget _fallbackPanel({
+    required String title,
+    required String subtitle,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ChartTheme.surface2,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: ChartTheme.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: ChartTheme.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: children,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _listRow(String left, String right) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: ChartTheme.surface2,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              left,
+  Widget _fallbackMetricCard(String label, String value, {Color? accent}) {
+    return SizedBox(
+      width: 148,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: ChartTheme.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: ChartTheme.borderSubtle),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
               style: const TextStyle(
-                color: ChartTheme.textSecondary,
-                fontSize: 12,
+                color: ChartTheme.textTertiary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-          Text(
-            right,
-            style: const TextStyle(
-              color: ChartTheme.textPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                color: accent ?? ChartTheme.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -551,5 +627,34 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
     final local = dt.toLocal();
     return '${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')} '
         '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _formatPrice(double? value) {
+    if (value == null || value <= 0) return '--';
+    return ChartTheme.formatPrice(value);
+  }
+
+  String _signedPrice(double? value) {
+    if (value == null) return '--';
+    return '${value >= 0 ? '+' : ''}${ChartTheme.formatPrice(value)}';
+  }
+
+  String _signedPercent(double? value) {
+    if (value == null) return '--';
+    return '${value >= 0 ? '+' : ''}${value.toStringAsFixed(2)}%';
+  }
+
+  String _formatCompactVolume(int? volume) {
+    if (volume == null || volume <= 0) return '--';
+    if (volume >= 100000000) return '${(volume / 100000000).toStringAsFixed(2)}亿';
+    if (volume >= 10000) return '${(volume / 10000).toStringAsFixed(2)}万';
+    return volume.toString();
+  }
+
+  String _formatCompactTurnover(double? turnover) {
+    if (turnover == null || turnover <= 0) return '--';
+    if (turnover >= 100000000) return '${(turnover / 100000000).toStringAsFixed(2)}亿';
+    if (turnover >= 10000) return '${(turnover / 10000).toStringAsFixed(2)}万';
+    return turnover.toStringAsFixed(0);
   }
 }

@@ -998,10 +998,6 @@ class _GenericChartPageState extends State<GenericChartPage>
                                                     () => _showPrevCloseLine = v),
                                           ),
                                         ),
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 12),
-                                        child: _buildStatsBar(),
-                                      ),
                                     ],
                                   ),
                                 ),
@@ -1052,8 +1048,6 @@ class _GenericChartPageState extends State<GenericChartPage>
                 changePercent: changePercent,
                 statusLabel: _statusLabel(),
               ),
-              const SizedBox(height: 12),
-              _buildStatsBar(),
             ],
           ),
         ),
@@ -1120,126 +1114,100 @@ class _GenericChartPageState extends State<GenericChartPage>
           if (currentPrice != null || statusLabel != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-              child: Row(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    flex: 5,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  Row(
+                    children: [
+                      Text(
+                        _effectiveSymbol,
+                        style: const TextStyle(
+                          color: ChartTheme.textPrimary,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.3,
+                          fontFamily: ChartTheme.fontMono,
+                          fontFeatures: [ChartTheme.tabularFigures],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      _infoChip(statusLabel ?? _marketTypeLabel(), tone: tone),
+                      const SizedBox(width: 8),
+                      _infoChip(_marketTypeLabel(), tone: ChartTheme.accentGold),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _effectiveName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: ChartTheme.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        currentPrice != null
+                            ? ChartTheme.formatPrice(currentPrice)
+                            : '--',
+                        style: TextStyle(
+                          color: tone,
+                          fontSize: 46,
+                          height: 0.95,
+                          fontWeight: FontWeight.w800,
+                          fontFamily: ChartTheme.fontMono,
+                          fontFeatures: const [ChartTheme.tabularFigures],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _effectiveSymbol,
-                              style: const TextStyle(
-                                color: ChartTheme.textPrimary,
-                                fontSize: 30,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.3,
-                                fontFamily: ChartTheme.fontMono,
-                                fontFeatures: [ChartTheme.tabularFigures],
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            _infoChip(statusLabel ?? _marketTypeLabel(), tone: tone),
-                            const SizedBox(width: 8),
-                            _infoChip(_marketTypeLabel(), tone: ChartTheme.accentGold),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _effectiveName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: ChartTheme.textSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              currentPrice != null
-                                  ? ChartTheme.formatPrice(currentPrice)
-                                  : '--',
+                              _signedMetric(change),
                               style: TextStyle(
                                 color: tone,
-                                fontSize: 46,
-                                height: 0.95,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
                                 fontFamily: ChartTheme.fontMono,
                                 fontFeatures: const [ChartTheme.tabularFigures],
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _signedMetric(change),
-                                    style: TextStyle(
-                                      color: tone,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      fontFamily: ChartTheme.fontMono,
-                                      fontFeatures: const [ChartTheme.tabularFigures],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _signedPercentMetric(changePercent),
-                                    style: TextStyle(
-                                      color: tone,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      fontFamily: ChartTheme.fontMono,
-                                      fontFeatures: const [ChartTheme.tabularFigures],
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(height: 4),
+                            Text(
+                              _signedPercentMetric(changePercent),
+                              style: TextStyle(
+                                color: tone,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: ChartTheme.fontMono,
+                                fontFeatures: const [ChartTheme.tabularFigures],
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 18),
-                  Expanded(
-                    flex: 4,
-                    child: Column(
-                      children: [
-                        for (var i = 0; i < metrics.length; i += 2)
-                          Padding(
-                            padding: EdgeInsets.only(
-                              bottom: i == metrics.length - 2 ? 0 : 8,
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: _desktopMetricTableCell(
-                                    metrics[i].$1,
-                                    metrics[i].$2,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _desktopMetricTableCell(
-                                    metrics[i + 1].$1,
-                                    metrics[i + 1].$2,
-                                  ),
-                                ),
-                              ],
-                            ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: metrics
+                        .map(
+                          (metric) => SizedBox(
+                            width: 156,
+                            child: _desktopMetricTableCell(metric.$1, metric.$2),
                           ),
-                      ],
-                    ),
+                        )
+                        .toList(),
                   ),
                 ],
               ),
