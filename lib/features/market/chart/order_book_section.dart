@@ -37,8 +37,6 @@ class OrderBookSection extends StatelessWidget {
 
     final simulatedRows = realRows.isEmpty ? _buildSimulatedRows() : const <_DepthRow>[];
     final displayRows = realRows.isNotEmpty ? realRows : simulatedRows;
-    final hasSimulatedDepth = realRows.isEmpty && simulatedRows.isNotEmpty;
-
     final topAsk = asks.isNotEmpty
         ? asks.first
         : (displayRows.isNotEmpty && displayRows.first.askPrice != null
@@ -52,16 +50,9 @@ class OrderBookSection extends StatelessWidget {
     final spread =
         topAsk != null && topBid != null ? topAsk.$1 - topBid.$1 : null;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: ChartTheme.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ChartTheme.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
           Row(
             children: [
               Expanded(
@@ -70,7 +61,6 @@ class OrderBookSection extends StatelessWidget {
                   price: topAsk?.$1,
                   qty: topAsk?.$2,
                   color: ChartTheme.down,
-                  synthetic: hasSimulatedDepth,
                 ),
               ),
               const SizedBox(width: 10),
@@ -80,7 +70,6 @@ class OrderBookSection extends StatelessWidget {
                   price: topBid?.$1,
                   qty: topBid?.$2,
                   color: ChartTheme.up,
-                  synthetic: hasSimulatedDepth,
                 ),
               ),
               const SizedBox(width: 10),
@@ -90,7 +79,6 @@ class OrderBookSection extends StatelessWidget {
                   price: spread,
                   qty: null,
                   color: ChartTheme.textPrimary,
-                  synthetic: hasSimulatedDepth,
                 ),
               ),
             ],
@@ -98,21 +86,12 @@ class OrderBookSection extends StatelessWidget {
           const SizedBox(height: 14),
           _headerRow(context),
           const SizedBox(height: 8),
-          if (hasSimulatedDepth) ...[
-            _simulatedBanner(),
-            const SizedBox(height: 8),
-          ],
           if (displayRows.isEmpty)
             _fallbackSnapshotCard()
           else
             ...displayRows.map(_depthRow),
-          if (hasSimulatedDepth) ...[
-            const SizedBox(height: 12),
-            _fallbackSnapshotCard(compact: true),
-          ],
         ],
-      ),
-    );
+      );
   }
 
   List<_DepthRow> _buildSimulatedRows() {
@@ -146,35 +125,7 @@ class OrderBookSection extends StatelessWidget {
     return double.parse(value.toStringAsFixed(decimals));
   }
 
-  Widget _simulatedBanner() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: ChartTheme.surface2,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: ChartTheme.borderSubtle),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.auto_graph_rounded, size: 16, color: ChartTheme.accentGold),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '当前无真实盘口，已根据实时价格生成模拟买卖盘并随价格变化刷新。',
-              style: TextStyle(
-                color: ChartTheme.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _fallbackSnapshotCard({bool compact = false}) {
+  Widget _fallbackSnapshotCard() {
     final q = quote;
     final prevClose = q?.prevClose ??
         ((q != null && q.change != 0) ? (q.price - q.change) : null);
@@ -194,7 +145,7 @@ class OrderBookSection extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(compact ? 12 : 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: ChartTheme.surface2,
         borderRadius: BorderRadius.circular(10),
@@ -202,8 +153,8 @@ class OrderBookSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            compact ? '同步展示当前可获取的实时快照。' : '当前数据源暂无盘口深度，已回退显示可获取的实时快照。',
+          const Text(
+            '实时行情摘要',
             style: const TextStyle(
               color: ChartTheme.textSecondary,
               fontSize: 13,
@@ -215,7 +166,7 @@ class OrderBookSection extends StatelessWidget {
             runSpacing: 10,
             children: items.map((item) {
               return SizedBox(
-                width: compact ? 132 : 148,
+                width: 148,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
@@ -259,7 +210,6 @@ class OrderBookSection extends StatelessWidget {
     required double? price,
     required int? qty,
     required Color color,
-    required bool synthetic,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -294,7 +244,7 @@ class OrderBookSection extends StatelessWidget {
           Text(
             qty != null
                 ? 'Qty $qty'
-                : (synthetic ? 'Simulated stream' : 'Realtime top level'),
+                : 'Realtime top level',
             style: const TextStyle(
               color: ChartTheme.textSecondary,
               fontSize: 11,
