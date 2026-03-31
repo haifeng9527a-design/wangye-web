@@ -872,105 +872,142 @@ class _GenericChartPageState extends State<GenericChartPage>
                   : _buildKlineTab(chartHeight, volumeHeight, timeAxisHeight);
             }
 
-            return SingleChildScrollView(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.paddingOf(context).bottom + 12,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1380),
-                    child: Column(
-                      children: [
-                        DetailHeader(
-                          symbol: _effectiveSymbol,
-                          name:
-                              _effectiveName.isNotEmpty ? _effectiveName : null,
-                          onBack: () => Navigator.of(context).maybePop(),
-                          onPrev: _prevNextIndex > 0 ? _switchToPrev : null,
-                          onNext: _prevNextIndex >= 0 &&
-                                  _prevNextIndex < _symbolListLength - 1
-                              ? _switchToNext
-                              : null,
-                        ),
-                        if (!useDesktopTerminalLayout)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-                            child: _buildOverviewCard(
-                              currentPrice: price,
-                              change: changeVal,
-                              changePercent: changePercent,
-                              prevClose: prevClose,
-                              open: q?.open,
-                              high: q?.high,
-                              low: q?.low,
-                              turnover: turnover,
-                              amplitude: amplitude,
-                            ),
-                          ),
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            14,
-                            useDesktopTerminalLayout ? 14 : 12,
-                            14,
-                            0,
-                          ),
-                          child: useDesktopTerminalLayout
-                              ? _buildDesktopTerminalBody(
-                                  chartContent: chartContent,
-                                  chartHeight: fixedChartHeight,
-                                  detailPanelHeight: detailPanelHeight,
-                                  currentPrice: price,
-                                  prevClose: prevClose,
-                                  change: changeVal,
-                                  changePercent: changePercent,
-                                )
-                              : Column(
-                                  children: [
-                                    _buildChartCard(
-                                      chartContent: chartContent,
-                                      chartHeight: fixedChartHeight,
-                                    ),
-                                    if (_tabController.index != 0)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 12),
-                                        child: IndicatorsPanel(
-                                          overlayIndicator: _overlayIndicator,
-                                          subChartIndicator: _subChartIndicator,
-                                          showPrevCloseLine: _showPrevCloseLine,
-                                          onOverlayChanged: (v) => setState(
-                                              () => _overlayIndicator = v),
-                                          onSubChartChanged: (v) => setState(
-                                              () => _subChartIndicator = v),
-                                          onShowPrevCloseLineChanged: (v) =>
-                                              setState(
-                                                  () => _showPrevCloseLine = v),
-                                        ),
-                                      ),
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 12),
-                                      child: _buildStatsBar(),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                        if (!useDesktopTerminalLayout)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-                            child: SizedBox(
-                              height: detailPanelHeight,
-                              child: _buildSidePanel(currentPrice: price),
-                            ),
-                          ),
-                        if (useDesktopTerminalLayout) const SizedBox(height: 8),
-                      ],
-                    ),
-                  ),
+            final pageBody = DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF111B26),
+                    ChartTheme.background,
+                    ChartTheme.background,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
+              child: useDesktopTerminalLayout
+                  ? SizedBox(
+                      height: constraints.maxHeight,
+                      child: Column(
+                        children: [
+                          DetailHeader(
+                            symbol: _effectiveSymbol,
+                            name:
+                                _effectiveName.isNotEmpty ? _effectiveName : null,
+                            onBack: () => Navigator.of(context).maybePop(),
+                            onPrev: _prevNextIndex > 0 ? _switchToPrev : null,
+                            onNext: _prevNextIndex >= 0 &&
+                                    _prevNextIndex < _symbolListLength - 1
+                                ? _switchToNext
+                                : null,
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: _buildDesktopTerminalBody(
+                                      chartContent: chartContent,
+                                      chartHeight: fixedChartHeight,
+                                      detailPanelHeight: detailPanelHeight,
+                                      currentPrice: price,
+                                      prevClose: prevClose,
+                                      change: changeVal,
+                                      changePercent: changePercent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.paddingOf(context).bottom + 12,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 1380),
+                            child: Column(
+                              children: [
+                                DetailHeader(
+                                  symbol: _effectiveSymbol,
+                                  name:
+                                      _effectiveName.isNotEmpty ? _effectiveName : null,
+                                  onBack: () => Navigator.of(context).maybePop(),
+                                  onPrev: _prevNextIndex > 0 ? _switchToPrev : null,
+                                  onNext: _prevNextIndex >= 0 &&
+                                          _prevNextIndex < _symbolListLength - 1
+                                      ? _switchToNext
+                                      : null,
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+                                  child: _buildOverviewCard(
+                                    currentPrice: price,
+                                    change: changeVal,
+                                    changePercent: changePercent,
+                                    prevClose: prevClose,
+                                    open: q?.open,
+                                    high: q?.high,
+                                    low: q?.low,
+                                    turnover: turnover,
+                                    amplitude: amplitude,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+                                  child: Column(
+                                    children: [
+                                      _buildChartCard(
+                                        chartContent: chartContent,
+                                        chartHeight: fixedChartHeight,
+                                      ),
+                                      if (_tabController.index != 0)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 12),
+                                          child: IndicatorsPanel(
+                                            overlayIndicator: _overlayIndicator,
+                                            subChartIndicator: _subChartIndicator,
+                                            showPrevCloseLine: _showPrevCloseLine,
+                                            onOverlayChanged: (v) => setState(
+                                                () => _overlayIndicator = v),
+                                            onSubChartChanged: (v) => setState(
+                                                () => _subChartIndicator = v),
+                                            onShowPrevCloseLineChanged: (v) =>
+                                                setState(
+                                                    () => _showPrevCloseLine = v),
+                                          ),
+                                        ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 12),
+                                        child: _buildStatsBar(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+                                  child: SizedBox(
+                                    height: detailPanelHeight,
+                                    child: _buildSidePanel(currentPrice: price),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
             );
+
+            return pageBody;
           },
         ),
       ),
@@ -1009,7 +1046,7 @@ class _GenericChartPageState extends State<GenericChartPage>
         ),
         const SizedBox(width: 16),
         SizedBox(
-          width: 368,
+          width: MediaQuery.sizeOf(context).width >= 1500 ? 360 : 340,
           child: Column(
             children: [
               _buildSidebarQuoteCard(
