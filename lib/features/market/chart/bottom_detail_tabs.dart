@@ -13,6 +13,7 @@ class BottomDetailTabs extends StatefulWidget {
   const BottomDetailTabs({
     super.key,
     required this.currentPrice,
+    this.quote,
     this.symbol,
     this.overlayIndicator = 'none',
     this.subChartIndicator = 'vol',
@@ -25,6 +26,7 @@ class BottomDetailTabs extends StatefulWidget {
   });
 
   final double? currentPrice;
+  final MarketQuote? quote;
   final String? symbol;
   final String overlayIndicator;
   final String subChartIndicator;
@@ -113,7 +115,7 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
 
     poll();
     _orderBookTimer = Timer.periodic(
-      const Duration(seconds: 2),
+      const Duration(seconds: 1),
       (_) => poll(),
     );
   }
@@ -141,7 +143,12 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
         child: Column(
           children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(widget.desktopMode ? 0 : 14, widget.desktopMode ? 0 : 14, widget.desktopMode ? 0 : 14, 0),
+              padding: EdgeInsets.fromLTRB(
+                widget.desktopMode ? 0 : 14,
+                widget.desktopMode ? 0 : 14,
+                widget.desktopMode ? 0 : 14,
+                0,
+              ),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -168,14 +175,10 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
                             vertical: widget.desktopMode ? 8 : 10,
                           ),
                           decoration: BoxDecoration(
-                            color: selected
-                                ? ChartTheme.tabSelectedBg
-                                : ChartTheme.surface2,
+                            color: selected ? ChartTheme.tabSelectedBg : ChartTheme.surface2,
                             borderRadius: BorderRadius.circular(widget.desktopMode ? 10 : 999),
                             border: Border.all(
-                              color: selected
-                                  ? ChartTheme.accentGold
-                                  : ChartTheme.borderSubtle,
+                              color: selected ? ChartTheme.accentGold : ChartTheme.borderSubtle,
                             ),
                           ),
                           child: Text(
@@ -185,8 +188,7 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
                                   ? ChartTheme.textPrimary
                                   : ChartTheme.textSecondary,
                               fontSize: widget.desktopMode ? 12 : 13,
-                              fontWeight:
-                                  selected ? FontWeight.w700 : FontWeight.w600,
+                              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                             ),
                           ),
                         ),
@@ -198,7 +200,12 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
             ),
             Expanded(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(widget.desktopMode ? 0 : 14, 12, widget.desktopMode ? 0 : 14, widget.desktopMode ? 0 : 14),
+                padding: EdgeInsets.fromLTRB(
+                  widget.desktopMode ? 0 : 14,
+                  12,
+                  widget.desktopMode ? 0 : 14,
+                  widget.desktopMode ? 0 : 14,
+                ),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 180),
                   child: _buildContent(context),
@@ -223,6 +230,8 @@ class _BottomDetailTabsState extends State<BottomDetailTabs> {
           key: const ValueKey('order-book'),
           child: OrderBookSection(
             currentPrice: widget.currentPrice,
+            quote: widget.quote,
+            symbol: widget.symbol,
             bids: _bids,
             asks: _asks,
           ),

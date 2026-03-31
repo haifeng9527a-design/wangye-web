@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -16,7 +16,7 @@ import 'chart_viewport.dart';
 import 'chart_viewport_controller.dart';
 import 'market_repository.dart';
 
-/// 指数/外汇/加密货币详情页切换时的内存缓存（最近 5 只）
+/// 鎸囨暟/澶栨眹/鍔犲瘑璐у竵璇︽儏椤靛垏鎹㈡椂鐨勫唴瀛樼紦瀛橈紙鏈€杩?5 鍙級
 class _GenericDetailCache {
   MarketQuote? quote;
   List<ChartCandle> intraday = [];
@@ -37,9 +37,9 @@ void _trimGenericCache() {
   }
 }
 
-/// 指数/外汇/加密货币详情：与股票详情（StockChartPage）同一套界面
-/// 分时：摘要行（价/均/涨/涨跌幅/量/额）+ IntradayChart 铺满、时间轴对齐、当前价虚线贯通
-/// K 线：ChartViewport + 指标面板 + 底部数据带。数据来源：Twelve Data
+/// 鎸囨暟/澶栨眹/鍔犲瘑璐у竵璇︽儏锛氫笌鑲＄エ璇︽儏锛圫tockChartPage锛夊悓涓€濂楃晫闈?
+/// 鍒嗘椂锛氭憳瑕佽锛堜环/鍧?娑?娑ㄨ穼骞?閲?棰濓級+ IntradayChart 閾烘弧銆佹椂闂磋酱瀵归綈銆佸綋鍓嶄环铏氱嚎璐€?
+/// K 绾匡細ChartViewport + 鎸囨爣闈㈡澘 + 搴曢儴鏁版嵁甯︺€傛暟鎹潵婧愶細Twelve Data
 class GenericChartPage extends StatefulWidget {
   const GenericChartPage({
     super.key,
@@ -61,12 +61,12 @@ class GenericChartPage extends StatefulWidget {
 class _GenericChartPageState extends State<GenericChartPage>
     with SingleTickerProviderStateMixin {
   static const List<(String, String)> _chartTabs = <(String, String)>[
-    ('分时', 'line'),
-    ('5分', '5min'),
-    ('15分', '15min'),
-    ('30分', '30min'),
-    ('1小时', '1h'),
-    ('日K', '1day'),
+    ('鍒嗘椂', 'line'),
+    ('5鍒?, '5min'),
+    ('15鍒?, '15min'),
+    ('30鍒?, '30min'),
+    ('1灏忔椂', '1h'),
+    ('鏃', '1day'),
   ];
 
   late TabController _tabController;
@@ -153,7 +153,7 @@ class _GenericChartPageState extends State<GenericChartPage>
       case 'day':
         return '1day';
       case 'week':
-        return '1day'; // Twelve Data 可后续扩展 1week
+        return '1day'; // Twelve Data 鍙悗缁墿灞?1week
       case 'month':
         return '1day';
       case 'year':
@@ -356,10 +356,19 @@ class _GenericChartPageState extends State<GenericChartPage>
     final minuteSec =
         ((DateTime.now().millisecondsSinceEpoch ~/ 60000) * 60).toDouble();
     final price = u.price;
+    final open = prev?.open ??
+        (_daily.isNotEmpty
+            ? _daily.last.open
+            : (_intraday.isNotEmpty ? _intraday.first.open : price));
     final high =
         prev?.high != null ? (price > prev!.high! ? price : prev.high) : price;
     final low =
         prev?.low != null ? (price < prev!.low! ? price : prev.low) : price;
+    final bid = prev?.bid;
+    final ask = prev?.ask;
+    final bidSize = prev?.bidSize;
+    final askSize = prev?.askSize;
+    final volume = prev?.volume;
 
     setState(() {
       _lastQuoteUpdatedAt = DateTime.now();
@@ -369,10 +378,14 @@ class _GenericChartPageState extends State<GenericChartPage>
         price: price,
         change: change,
         changePercent: changePercent,
-        open: prev?.open,
+        open: open,
         high: high,
         low: low,
-        volume: prev?.volume,
+        volume: volume,
+        bid: bid,
+        ask: ask,
+        bidSize: bidSize,
+        askSize: askSize,
         prevClose: prevClose,
       );
 
@@ -476,11 +489,11 @@ class _GenericChartPageState extends State<GenericChartPage>
   void _startRealtimeTimers() {
     _quoteTimer?.cancel();
     _chartTimer?.cancel();
-    _quoteTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _quoteTimer = Timer.periodic(const Duration(milliseconds: 800), (_) {
       if (!mounted) return;
       _refreshQuoteSilently();
     });
-    _chartTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+    _chartTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (!mounted) return;
       _refreshQuoteSilently();
       _refreshChartsSilently();
@@ -1152,7 +1165,7 @@ class _GenericChartPageState extends State<GenericChartPage>
                             Text(
                               currentPrice != null
                                   ? ChartTheme.formatPrice(currentPrice)
-                                  : '—',
+                                  : '鈥?,
                               style: TextStyle(
                                 color: tone,
                                 fontSize: 46,
@@ -1306,12 +1319,12 @@ class _GenericChartPageState extends State<GenericChartPage>
   }
 
   String _formatMetric(double? value) {
-    if (value == null || value <= 0) return '—';
+    if (value == null || value <= 0) return '鈥?;
     return ChartTheme.formatPrice(value);
   }
 
   String _formatVolumeCompact(int? value) {
-    if (value == null || value <= 0) return '—';
+    if (value == null || value <= 0) return '鈥?;
     if (value >= 100000000) return '${(value / 100000000).toStringAsFixed(2)}B';
     if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(2)}M';
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
@@ -1319,7 +1332,7 @@ class _GenericChartPageState extends State<GenericChartPage>
   }
 
   String _formatLargeNumber(double? value) {
-    if (value == null || value <= 0) return '—';
+    if (value == null || value <= 0) return '鈥?;
     if (value >= 1000000000) return '${(value / 1000000000).toStringAsFixed(2)}B';
     if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(2)}M';
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
@@ -1327,12 +1340,12 @@ class _GenericChartPageState extends State<GenericChartPage>
   }
 
   String _signedMetric(double? value) {
-    if (value == null) return '—';
+    if (value == null) return '鈥?;
     return '${value >= 0 ? '+' : ''}${ChartTheme.formatPrice(value)}';
   }
 
   String _signedPercentMetric(double? value) {
-    if (value == null) return '—';
+    if (value == null) return '鈥?;
     return '${value >= 0 ? '+' : ''}${value.toStringAsFixed(2)}%';
   }
 
@@ -1356,6 +1369,7 @@ class _GenericChartPageState extends State<GenericChartPage>
         child: BottomDetailTabs(
           symbol: _effectiveSymbol,
           currentPrice: currentPrice,
+          quote: _quote,
           overlayIndicator: _overlayIndicator,
           subChartIndicator: _subChartIndicator,
           showPrevCloseLine: _showPrevCloseLine,
@@ -1406,7 +1420,7 @@ class _GenericChartPageState extends State<GenericChartPage>
           ),
           const SizedBox(height: 10),
           Text(
-            currentPrice != null ? ChartTheme.formatPrice(currentPrice) : '—',
+            currentPrice != null ? ChartTheme.formatPrice(currentPrice) : '鈥?,
             style: TextStyle(
               color: priceColor,
               fontSize: 38,
@@ -1417,7 +1431,7 @@ class _GenericChartPageState extends State<GenericChartPage>
           ),
           const SizedBox(height: 6),
           Text(
-            '${change != null ? (change >= 0 ? '+' : '') + ChartTheme.formatPrice(change) : '—'}   ${changePercent != null ? '${changePercent >= 0 ? '+' : ''}${changePercent.toStringAsFixed(2)}%' : '—'}',
+            '${change != null ? (change >= 0 ? '+' : '') + ChartTheme.formatPrice(change) : '鈥?}   ${changePercent != null ? '${changePercent >= 0 ? '+' : ''}${changePercent.toStringAsFixed(2)}%' : '鈥?}',
             style: TextStyle(
               color: priceColor,
               fontSize: 15,
@@ -1431,17 +1445,27 @@ class _GenericChartPageState extends State<GenericChartPage>
             children: [
               Expanded(
                 child: _sidebarMetric(
-                  '卖一',
-                  q?.ask != null ? ChartTheme.formatPrice(q!.ask!) : '—',
-                  valueColor: ChartTheme.down,
+                  q?.ask != null ? '卖一' : '成交量',
+                  q?.ask != null
+                      ? ChartTheme.formatPrice(q!.ask!)
+                      : _formatCompactVolume(q?.volume),
+                  valueColor:
+                      q?.ask != null ? ChartTheme.down : ChartTheme.textPrimary,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _sidebarMetric(
-                  '买一',
-                  q?.bid != null ? ChartTheme.formatPrice(q!.bid!) : '—',
-                  valueColor: ChartTheme.up,
+                  q?.bid != null ? '买一' : '成交额',
+                  q?.bid != null
+                      ? ChartTheme.formatPrice(q!.bid!)
+                      : _formatCompactTurnover(
+                          q?.volume != null && q!.volume! > 0 && q.price > 0
+                              ? q.volume! * q.price
+                              : null,
+                        ),
+                  valueColor:
+                      q?.bid != null ? ChartTheme.up : ChartTheme.textPrimary,
                 ),
               ),
             ],
@@ -1451,15 +1475,15 @@ class _GenericChartPageState extends State<GenericChartPage>
             children: [
               Expanded(
                 child: _sidebarMetric(
-                  '今开',
-                  q?.open != null ? ChartTheme.formatPrice(q!.open!) : '—',
+                  '浠婂紑',
+                  q?.open != null ? ChartTheme.formatPrice(q!.open!) : '鈥?,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _sidebarMetric(
-                  '昨收',
-                  prevClose != null ? ChartTheme.formatPrice(prevClose) : '—',
+                  '鏄ㄦ敹',
+                  prevClose != null ? ChartTheme.formatPrice(prevClose) : '鈥?,
                 ),
               ),
             ],
@@ -1469,16 +1493,16 @@ class _GenericChartPageState extends State<GenericChartPage>
             children: [
               Expanded(
                 child: _sidebarMetric(
-                  '最高',
-                  q?.high != null ? ChartTheme.formatPrice(q!.high!) : '—',
+                  '鏈€楂?,
+                  q?.high != null ? ChartTheme.formatPrice(q!.high!) : '鈥?,
                   valueColor: ChartTheme.up,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _sidebarMetric(
-                  '最低',
-                  q?.low != null ? ChartTheme.formatPrice(q!.low!) : '—',
+                  '鏈€浣?,
+                  q?.low != null ? ChartTheme.formatPrice(q!.low!) : '鈥?,
                   valueColor: ChartTheme.down,
                 ),
               ),
@@ -1542,21 +1566,21 @@ class _GenericChartPageState extends State<GenericChartPage>
     final symbol = _effectiveSymbol.trim().toUpperCase();
     if (symbol.contains('/')) {
       if (symbol.endsWith('/USD') || symbol.endsWith('/USDT')) {
-        return '加密货币';
+        return '鍔犲瘑璐у竵';
       }
-      return '外汇';
+      return '澶栨眹';
     }
-    return '指数';
+    return '鎸囨暟';
   }
 
   String _liveBadgeText() {
     final last = _lastQuoteUpdatedAt;
-    if (last == null) return '等待实时数据';
+    if (last == null) return '绛夊緟瀹炴椂鏁版嵁';
     final seconds = DateTime.now().difference(last).inSeconds;
-    if (seconds <= 1) return '实时更新中';
-    if (seconds < 60) return '$seconds 秒前更新';
+    if (seconds <= 1) return '瀹炴椂鏇存柊涓?;
+    if (seconds < 60) return '$seconds 绉掑墠鏇存柊';
     final minutes = DateTime.now().difference(last).inMinutes;
-    return '$minutes 分钟前更新';
+    return '$minutes 鍒嗛挓鍓嶆洿鏂?;
   }
 
   Widget _buildOverviewCard({
@@ -1779,7 +1803,7 @@ class _GenericChartPageState extends State<GenericChartPage>
     );
   }
 
-  /// 分时图上方摘要行：价 均 涨 涨跌幅 量 额（与股票详情一致，数据一目了然）
+  /// 鍒嗘椂鍥句笂鏂规憳瑕佽锛氫环 鍧?娑?娑ㄨ穼骞?閲?棰濓紙涓庤偂绁ㄨ鎯呬竴鑷达紝鏁版嵁涓€鐩簡鐒讹級
   Widget _buildIntradaySummaryRow() {
     final q = _quote;
     final price = (q != null && !q.hasError && q.price > 0)
@@ -1818,14 +1842,14 @@ class _GenericChartPageState extends State<GenericChartPage>
         ? (price - prevVal) / prevVal * 100
         : (q?.changePercent ?? 0.0);
     final changeColor = (change >= 0 ? ChartTheme.up : ChartTheme.down);
-    String turnStr = '—';
+    String turnStr = '鈥?;
     if (turnover >= 10000)
-      turnStr = '${(turnover / 10000).toStringAsFixed(2)}万';
+      turnStr = '${(turnover / 10000).toStringAsFixed(2)}涓?;
     else if (turnover > 0) turnStr = turnover.toStringAsFixed(0);
-    String volStr = '—';
+    String volStr = '鈥?;
     if (totalVol > 0)
       volStr = totalVol >= 10000
-          ? '${(totalVol / 10000).toStringAsFixed(2)}万'
+          ? '${(totalVol / 10000).toStringAsFixed(2)}涓?
           : totalVol.toString();
 
     return Container(
@@ -1841,9 +1865,9 @@ class _GenericChartPageState extends State<GenericChartPage>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _summaryBlock(AppLocalizations.of(context)!.chartPrice,
-                price > 0 ? price.toStringAsFixed(2) : '—', null),
+                price > 0 ? price.toStringAsFixed(2) : '鈥?, null),
             _summaryBlock(AppLocalizations.of(context)!.chartAvg,
-                avgPrice != null ? avgPrice.toStringAsFixed(2) : '—', null),
+                avgPrice != null ? avgPrice.toStringAsFixed(2) : '鈥?, null),
             _summaryBlock(
                 AppLocalizations.of(context)!.chartChangeShort,
                 '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}',
@@ -2033,5 +2057,27 @@ class _GenericChartPageState extends State<GenericChartPage>
       volume: volume,
       turnover: turnover,
     );
+  }
+
+  String _formatCompactVolume(int? volume) {
+    if (volume == null || volume <= 0) return '--';
+    if (volume >= 100000000) {
+      return '${(volume / 100000000).toStringAsFixed(2)}浜?;
+    }
+    if (volume >= 10000) {
+      return '${(volume / 10000).toStringAsFixed(2)}涓?;
+    }
+    return volume.toString();
+  }
+
+  String _formatCompactTurnover(double? turnover) {
+    if (turnover == null || turnover <= 0) return '--';
+    if (turnover >= 100000000) {
+      return '${(turnover / 100000000).toStringAsFixed(2)}浜?;
+    }
+    if (turnover >= 10000) {
+      return '${(turnover / 10000).toStringAsFixed(2)}涓?;
+    }
+    return turnover.toStringAsFixed(0);
   }
 }
