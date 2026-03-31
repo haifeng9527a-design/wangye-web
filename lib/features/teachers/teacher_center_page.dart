@@ -99,41 +99,54 @@ class _TeacherCenterPageState extends State<TeacherCenterPage>
   Future<void> _loadProfile() async {
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (userId.isEmpty) {
+      if (!mounted) return;
+      setState(() => _profileLoaded = true);
       return;
     }
-    final profile = await _repository.fetchProfile(userId);
-    if (!mounted || profile == null) {
-      return;
+    try {
+      final profile = await _repository.fetchProfile(userId);
+      if (!mounted) {
+        return;
+      }
+      if (profile != null) {
+        _realNameController.text = profile.realName ?? '';
+        _titleController.text = profile.title ?? '';
+        _orgController.text = profile.organization ?? '';
+        _countryController.text = profile.country ?? '';
+        _countryValue = (profile.country ?? '').isEmpty ? null : profile.country;
+        _cityController.text = profile.city ?? '';
+        _yearsController.text = profile.yearsExperience?.toString() ?? '';
+        _yearsValue = profile.yearsExperience;
+        _marketsController.text = profile.markets ?? '';
+        _instrumentsController.text = profile.instruments ?? '';
+        _certificationsController.text = profile.certifications ?? '';
+        _licenseController.text = profile.licenseNo ?? '';
+        _brokerController.text = profile.broker ?? '';
+        _trackRecordController.text = profile.trackRecord ?? '';
+        _idPhotoUrl = profile.idPhotoUrl;
+        _licensePhotoUrl = profile.licensePhotoUrl;
+        _certificationPhotoUrl = profile.certificationPhotoUrl;
+        _bioController.text = profile.bio ?? '';
+        _styleController.text = profile.style ?? '';
+        _riskController.text = profile.riskLevel ?? '';
+        _specialtiesController.text = (profile.specialties ?? []).join(',');
+        _statusLabel = profile.status ?? (_statusLabel.isEmpty ? 'pending' : _statusLabel);
+        _frozenUntil = profile.frozenUntil;
+        _applicationAck = profile.applicationAck ?? false;
+      } else if (_statusLabel.isEmpty) {
+        _statusLabel = 'pending';
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      if (_statusLabel.isEmpty) {
+        _statusLabel = 'pending';
+      }
     }
-    _realNameController.text = profile.realName ?? '';
-    _titleController.text = profile.title ?? '';
-    _orgController.text = profile.organization ?? '';
-    _countryController.text = profile.country ?? '';
-    _countryValue = (profile.country ?? '').isEmpty ? null : profile.country;
-    _cityController.text = profile.city ?? '';
-    _yearsController.text = profile.yearsExperience?.toString() ?? '';
-    _yearsValue = profile.yearsExperience;
-    _marketsController.text = profile.markets ?? '';
-    _instrumentsController.text = profile.instruments ?? '';
-    _certificationsController.text = profile.certifications ?? '';
-    _licenseController.text = profile.licenseNo ?? '';
-    _brokerController.text = profile.broker ?? '';
-    _trackRecordController.text = profile.trackRecord ?? '';
-    _idPhotoUrl = profile.idPhotoUrl;
-    _licensePhotoUrl = profile.licensePhotoUrl;
-    _certificationPhotoUrl = profile.certificationPhotoUrl;
-    _bioController.text = profile.bio ?? '';
-    _styleController.text = profile.style ?? '';
-    _riskController.text = profile.riskLevel ?? '';
-    _specialtiesController.text = (profile.specialties ?? []).join(',');
-    _statusLabel = profile.status ?? 'pending';
-    _frozenUntil = profile.frozenUntil;
-    _applicationAck = profile.applicationAck ?? false;
     _profileLoaded = true;
     _configureTabsForCurrentStatus();
-    if (mounted) {
-      setState(() {});
-    }
+    setState(() {});
   }
 
   void _configureTabsForCurrentStatus() {
