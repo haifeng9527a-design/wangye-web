@@ -502,11 +502,7 @@ class _TeacherCenterPageState extends State<TeacherCenterPage>
               )
             : null,
       ),
-      body: !_profileLoaded && !_isApproved
-          ? const Center(
-              child: CircularProgressIndicator(color: TradingUi.accent),
-            )
-          : (_isApproved && _tabController != null)
+      body: (_isApproved && _tabController != null)
               ? Container(
                   decoration: const BoxDecoration(
                     color: TradingUi.pageBg,

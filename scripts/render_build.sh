@@ -63,6 +63,6 @@ CURRENT_STEP="flutter pub get"
 echo "==> $CURRENT_STEP"
 flutter pub get
 
-CURRENT_STEP="flutter build web --release --verbose"
+CURRENT_STEP="flutter build web --release --pwa-strategy=none --verbose"
 echo "==> $CURRENT_STEP"
-flutter build web --release --verbose
+flutter build web --release --pwa-strategy=none --verbose
