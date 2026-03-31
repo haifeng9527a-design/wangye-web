@@ -61,12 +61,12 @@ class GenericChartPage extends StatefulWidget {
 class _GenericChartPageState extends State<GenericChartPage>
     with SingleTickerProviderStateMixin {
   static const List<(String, String)> _chartTabs = <(String, String)>[
-    ('鍒嗘椂', 'line'),
-    ('5鍒?, '5min'),
-    ('15鍒?, '15min'),
-    ('30鍒?, '30min'),
-    ('1灏忔椂', '1h'),
-    ('鏃', '1day'),
+    ('分时', 'line'),
+    ('5分', '5min'),
+    ('15分', '15min'),
+    ('30分', '30min'),
+    ('1小时', '1h'),
+    ('日K', '1day'),
   ];
 
   late TabController _tabController;
