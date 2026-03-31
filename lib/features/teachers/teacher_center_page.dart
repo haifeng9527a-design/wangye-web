@@ -530,11 +530,292 @@ class _TeacherCenterPageState extends State<TeacherCenterPage>
   Widget _buildProfileTab() {
     final user = FirebaseAuth.instance.currentUser;
     final l10n = AppLocalizations.of(context)!;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        if (!_isApproved) _buildStatusBanner(),
-        _sectionCard(l10n.teachersBasicInfo, [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final isDesktop = width >= 1100;
+        final isTablet = width >= 760;
+        final contentMaxWidth = isDesktop ? 980.0 : 760.0;
+        final horizontalPadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
+        final sectionGap = isDesktop ? 20.0 : 16.0;
+
+        return ListView(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: 16,
+          ),
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                child: Column(
+                  children: [
+                    if (!_isApproved) _buildStatusBanner(),
+                    _sectionCard(l10n.teachersBasicInfo, [
+                      _buildProfileIdentityHeader(user, isDesktop: isDesktop),
+                      const SizedBox(height: 16),
+                      ..._buildFieldGrid(
+                        isDesktop: isDesktop,
+                        children: [
+                          TextField(
+                            controller: _realNameController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersRealNameRequired,
+                            ),
+                          ),
+                          TextField(
+                            controller: _titleController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersProfessionalTitle,
+                            ),
+                          ),
+                          TextField(
+                            controller: _orgController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersOrgCompany,
+                            ),
+                          ),
+                          DropdownButtonFormField<String>(
+                            initialValue: _countryValue,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersCountryRegion,
+                            ),
+                            items: l10n.teachersCountryOptions
+                                .split(', ')
+                                .map(
+                                  (item) => DropdownMenuItem(
+                                    value: item.trim(),
+                                    child: Text(item.trim()),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) =>
+                                setState(() => _countryValue = value),
+                          ),
+                          TextField(
+                            controller: _cityController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersCityLabel,
+                            ),
+                          ),
+                          DropdownButtonFormField<int>(
+                            initialValue: _yearsValue,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersYearsExperience,
+                            ),
+                            items: List.generate(21, (index) => index)
+                                .where((item) => item > 0)
+                                .map(
+                                  (item) => DropdownMenuItem(
+                                    value: item,
+                                    child: Text(
+                                      item == 20
+                                          ? l10n.teachersYearsAbove20
+                                          : l10n.teachersYearsFormat(item),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) =>
+                                setState(() => _yearsValue = value),
+                          ),
+                        ],
+                      ),
+                    ]),
+                    SizedBox(height: sectionGap),
+                    _sectionCard(l10n.teachersTradingBackground, [
+                      ..._buildFieldGrid(
+                        isDesktop: isDesktop,
+                        children: [
+                          TextField(
+                            controller: _marketsController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersMainMarketLabel,
+                            ),
+                          ),
+                          TextField(
+                            controller: _instrumentsController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersMainVariety,
+                            ),
+                          ),
+                          TextField(
+                            controller: _styleController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersTradingStyle,
+                            ),
+                          ),
+                          TextField(
+                            controller: _riskController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersRiskPreference,
+                            ),
+                          ),
+                          TextField(
+                            controller: _specialtiesController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersExpertiseVariety,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ]),
+                    SizedBox(height: sectionGap),
+                    _sectionCard(l10n.teachersQualificationCompliance, [
+                      TextField(
+                        controller: _certificationsController,
+                        decoration: InputDecoration(
+                          labelText: l10n.teachersQualificationCert,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildUploadField(
+                        isDesktop: isDesktop,
+                        thumb: _buildVerifyThumb(
+                          _certificationPhotoUrl,
+                          l10n.teachersQualificationPhoto,
+                        ),
+                        button: OutlinedButton.icon(
+                          onPressed: () => _pickVerificationPhoto(
+                            category: 'certification',
+                            onUploaded: (url) {
+                              setState(() => _certificationPhotoUrl = url);
+                            },
+                          ),
+                          icon: const Icon(Icons.photo_library_outlined),
+                          label: Text(l10n.teachersUploadQualification),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ..._buildFieldGrid(
+                        isDesktop: isDesktop,
+                        children: [
+                          TextField(
+                            controller: _licenseController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersLicenseNoLabel,
+                            ),
+                          ),
+                          TextField(
+                            controller: _brokerController,
+                            decoration: InputDecoration(
+                              labelText: l10n.teachersBrokerLabel,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ]),
+                    SizedBox(height: sectionGap),
+                    _sectionCard(l10n.teachersPerformanceIntro, [
+                      TextField(
+                        controller: _trackRecordController,
+                        decoration: InputDecoration(
+                          labelText: l10n.teachersPerformanceLabel,
+                        ),
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _bioController,
+                        decoration: InputDecoration(
+                          labelText: l10n.teachersPersonalIntro,
+                        ),
+                        maxLines: 4,
+                      ),
+                    ]),
+                    SizedBox(height: sectionGap),
+                    _sectionCard(l10n.teachersIdVerification, [
+                      _buildUploadField(
+                        isDesktop: isDesktop,
+                        thumb: _buildVerifyThumb(
+                          _idPhotoUrl,
+                          l10n.teachersUploadIdPhoto,
+                        ),
+                        button: OutlinedButton.icon(
+                          onPressed: () => _pickVerificationPhoto(
+                            category: 'id',
+                            onUploaded: (url) =>
+                                setState(() => _idPhotoUrl = url),
+                          ),
+                          icon: const Icon(Icons.badge_outlined),
+                          label: Text(l10n.teachersUploadIdPhoto),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildUploadField(
+                        isDesktop: isDesktop,
+                        thumb: _buildVerifyThumb(
+                          _licensePhotoUrl,
+                          l10n.teachersUploadCertification,
+                        ),
+                        button: OutlinedButton.icon(
+                          onPressed: () => _pickVerificationPhoto(
+                            category: 'license',
+                            onUploaded: (url) =>
+                                setState(() => _licensePhotoUrl = url),
+                          ),
+                          icon: const Icon(Icons.verified_outlined),
+                          label: Text(l10n.teachersUploadCertification),
+                        ),
+                      ),
+                    ]),
+                    SizedBox(height: sectionGap),
+                    AppCard(
+                      margin: EdgeInsets.only(bottom: isDesktop ? 24 : 16),
+                      child: Padding(
+                        padding: EdgeInsets.all(isDesktop ? 20 : 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SwitchListTile.adaptive(
+                              contentPadding: EdgeInsets.zero,
+                              value: _applicationAck,
+                              onChanged: (value) =>
+                                  setState(() => _applicationAck = value),
+                              title: Text(l10n.teachersRiskAckTitle),
+                            ),
+                            const SizedBox(height: 12),
+                            if (isDesktop)
+                              Row(
+                                children: [
+                                  Expanded(child: _buildSubmitButton(l10n)),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: _buildPreviewButton(l10n)),
+                                ],
+                              )
+                            else ...[
+                              _buildSubmitButton(l10n),
+                              const SizedBox(height: 8),
+                              _buildPreviewButton(l10n),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileIdentityHeader(User? user, {required bool isDesktop}) {
+    final l10n = AppLocalizations.of(context)!;
+    final displayName = user?.displayName?.trim().isNotEmpty == true
+        ? user!.displayName!.trim()
+        : l10n.teachersNoNicknameSet;
+    final hint = Text(
+      l10n.teachersAvatarNicknameHint,
+      style: const TextStyle(fontSize: 12, color: _muted),
+    );
+
+    if (!isDesktop) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             children: [
               CircleAvatar(
@@ -549,227 +830,132 @@ class _TeacherCenterPageState extends State<TeacherCenterPage>
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user?.displayName?.trim().isNotEmpty == true
-                          ? user!.displayName!.trim()
-                          : l10n.teachersNoNicknameSet,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.teachersAvatarNicknameHint,
-                      style: const TextStyle(fontSize: 12, color: _muted),
-                    ),
-                  ],
+                child: Text(
+                  displayName,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _realNameController,
-            decoration: InputDecoration(labelText: l10n.teachersRealNameRequired),
-          ),
-          TextField(
-            controller: _titleController,
-            decoration: InputDecoration(labelText: l10n.teachersProfessionalTitle),
-          ),
-          TextField(
-            controller: _orgController,
-            decoration: InputDecoration(labelText: l10n.teachersOrgCompany),
-          ),
-          DropdownButtonFormField<String>(
-            initialValue: _countryValue,
-            decoration: InputDecoration(labelText: l10n.teachersCountryRegion),
-            items: l10n.teachersCountryOptions.split(', ').map((item) => DropdownMenuItem(value: item.trim(), child: Text(item.trim()))).toList(),
-            onChanged: (value) => setState(() => _countryValue = value),
-          ),
-          TextField(
-            controller: _cityController,
-            decoration: InputDecoration(labelText: l10n.teachersCityLabel),
-          ),
-          DropdownButtonFormField<int>(
-            initialValue: _yearsValue,
-            decoration: InputDecoration(labelText: l10n.teachersYearsExperience),
-            items: List.generate(21, (index) => index)
-                .where((item) => item > 0)
-                .map(
-                  (item) => DropdownMenuItem(
-                    value: item,
-                    child: Text(item == 20 ? l10n.teachersYearsAbove20 : l10n.teachersYearsFormat(item)),
-                  ),
-                )
-                .toList(),
-            onChanged: (value) => setState(() => _yearsValue = value),
-          ),
-        ]),
-        _sectionCard(l10n.teachersTradingBackground, [
-          TextField(
-            controller: _marketsController,
-            decoration: InputDecoration(
-              labelText: l10n.teachersMainMarketLabel,
-            ),
-          ),
-          TextField(
-            controller: _instrumentsController,
-            decoration: InputDecoration(
-              labelText: l10n.teachersMainVariety,
-            ),
-          ),
-          TextField(
-            controller: _styleController,
-            decoration: InputDecoration(labelText: l10n.teachersTradingStyle),
-          ),
-          TextField(
-            controller: _riskController,
-            decoration: InputDecoration(labelText: l10n.teachersRiskPreference),
-          ),
-          TextField(
-            controller: _specialtiesController,
-            decoration: InputDecoration(
-              labelText: l10n.teachersExpertiseVariety,
-            ),
-          ),
-        ]),
-        _sectionCard(l10n.teachersQualificationCompliance, [
-          TextField(
-            controller: _certificationsController,
-            decoration: InputDecoration(
-              labelText: l10n.teachersQualificationCert,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
+          const SizedBox(height: 8),
+          hint,
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 28,
+          backgroundColor: _accent,
+          backgroundImage: user?.photoURL?.trim().isNotEmpty == true
+              ? NetworkImage(user!.photoURL!.trim())
+              : null,
+          child: user?.photoURL?.trim().isNotEmpty == true
+              ? null
+              : const Icon(Icons.person, color: AppColors.surface),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildVerifyThumb(_certificationPhotoUrl, l10n.teachersQualificationPhoto),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _pickVerificationPhoto(
-                    category: 'certification',
-                    onUploaded: (url) {
-                      setState(() => _certificationPhotoUrl = url);
-                    },
-                  ),
-                  icon: const Icon(Icons.photo_library_outlined),
-                  label: Text(AppLocalizations.of(context)!.teachersUploadQualification),
-                ),
+              Text(
+                displayName,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
+              const SizedBox(height: 4),
+              hint,
             ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _licenseController,
-            decoration: InputDecoration(labelText: l10n.teachersLicenseNoLabel),
-          ),
-          TextField(
-            controller: _brokerController,
-            decoration: InputDecoration(labelText: l10n.teachersBrokerLabel),
-          ),
-        ]),
-        _sectionCard(l10n.teachersPerformanceIntro, [
-          TextField(
-            controller: _trackRecordController,
-            decoration: InputDecoration(
-              labelText: l10n.teachersPerformanceLabel,
-            ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _bioController,
-            decoration: InputDecoration(labelText: l10n.teachersPersonalIntro),
-            maxLines: 3,
-          ),
-        ]),
-        _sectionCard(l10n.teachersIdVerification, [
-          Row(
-            children: [
-              _buildVerifyThumb(_idPhotoUrl, l10n.teachersUploadIdPhoto),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _pickVerificationPhoto(
-                    category: 'id',
-                    onUploaded: (url) => setState(() => _idPhotoUrl = url),
-                  ),
-                  icon: const Icon(Icons.badge_outlined),
-                  label: Text(AppLocalizations.of(context)!.teachersUploadIdPhoto),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildVerifyThumb(_licensePhotoUrl, l10n.teachersUploadCertification),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _pickVerificationPhoto(
-                    category: 'license',
-                    onUploaded: (url) =>
-                        setState(() => _licensePhotoUrl = url),
-                  ),
-                  icon: const Icon(Icons.verified_outlined),
-                  label: Text(AppLocalizations.of(context)!.teachersUploadCertification),
-                ),
-              ),
-            ],
-          ),
-        ]),
-        AppCard(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  value: _applicationAck,
-                  onChanged: (value) =>
-                      setState(() => _applicationAck = value),
-                  title: Text(AppLocalizations.of(context)!.teachersRiskAckTitle),
-                ),
-                const SizedBox(height: 12),
-                AppButton(
-                  onPressed: (_saving ||
-                          _statusLabel.toString().trim().toLowerCase() ==
-                              'pending')
-                      ? null
-                      : _saveProfile,
-                  label: _saving
-                      ? l10n.teachersSubmitting
-                      : (_statusLabel.toString().trim().toLowerCase() ==
-                              'pending'
-                          ? l10n.teachersSubmittedPendingReview
-                          : l10n.teachersSubmitApplication),
-                ),
-                const SizedBox(height: 8),
-                AppButton(
-                  variant: AppButtonVariant.text,
-                  label: AppLocalizations.of(context)!.teachersPreviewHomepage,
-                  onPressed: () {
-                    final userId =
-                        FirebaseAuth.instance.currentUser?.uid ?? '';
-                    if (userId.isEmpty) return;
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            TeacherPublicPage(teacherId: userId),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
           ),
         ),
       ],
+    );
+  }
+
+  List<Widget> _buildFieldGrid({
+    required bool isDesktop,
+    required List<Widget> children,
+  }) {
+    if (!isDesktop) {
+      return children
+          .expand((child) => [child, const SizedBox(height: 12)])
+          .toList()
+        ..removeLast();
+    }
+
+    final rows = <Widget>[];
+    for (var i = 0; i < children.length; i += 2) {
+      final left = children[i];
+      final right = i + 1 < children.length ? children[i + 1] : null;
+      rows.add(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: left),
+            const SizedBox(width: 16),
+            Expanded(child: right ?? const SizedBox.shrink()),
+          ],
+        ),
+      );
+      if (i + 2 < children.length) {
+        rows.add(const SizedBox(height: 12));
+      }
+    }
+    return rows;
+  }
+
+  Widget _buildUploadField({
+    required bool isDesktop,
+    required Widget thumb,
+    required Widget button,
+  }) {
+    if (!isDesktop) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          thumb,
+          const SizedBox(height: 12),
+          button,
+        ],
+      );
+    }
+    return Row(
+      children: [
+        thumb,
+        const SizedBox(width: 12),
+        Expanded(child: button),
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton(AppLocalizations l10n) {
+    return AppButton(
+      onPressed: (_saving ||
+              _statusLabel.toString().trim().toLowerCase() == 'pending')
+          ? null
+          : _saveProfile,
+      label: _saving
+          ? l10n.teachersSubmitting
+          : (_statusLabel.toString().trim().toLowerCase() == 'pending'
+              ? l10n.teachersSubmittedPendingReview
+              : l10n.teachersSubmitApplication),
+    );
+  }
+
+  Widget _buildPreviewButton(AppLocalizations l10n) {
+    return AppButton(
+      variant: AppButtonVariant.text,
+      label: l10n.teachersPreviewHomepage,
+      onPressed: () {
+        final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        if (userId.isEmpty) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TeacherPublicPage(teacherId: userId),
+          ),
+        );
+      },
     );
   }
 
