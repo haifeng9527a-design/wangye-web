@@ -156,4 +156,3 @@ String _displayName(TeacherProfile profile) {
   final name = profile.realName?.trim() ?? '';
   return name.isEmpty ? '交易员' : name;
 }
-/* CODEX: responsive update planned - implement responsive LayoutBuilder, increase touch targets, adjust grid/stack layout for small/large viewports */

@@ -179,4 +179,3 @@ class _SectionTitle extends StatelessWidget {
     );
   }
 }
-/* CODEX: responsive update planned - detail layout responsive, convert side panel to modal on small screens */
